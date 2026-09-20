@@ -83,7 +83,7 @@ input, textarea, select { font: inherit; color: inherit; caret-color: var(--blue
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
 
 /* sheet */
-main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(--pad) 120px; }
+main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(--pad) 120px; }
 .sheet-head { padding: 28px 0 16px; display: flex; flex-wrap: wrap; gap: 14px 24px; justify-content: space-between; align-items: flex-end; }
 .sheet-head h1 { margin: 0; font-size: clamp(1.6rem, 3vw + .5rem, 2.4rem); line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
 .sheet-head p { margin: 6px 0 0; color: var(--ink-soft); max-width: 60ch; }
@@ -99,16 +99,20 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
 
 /* ledger table */
 .ledger { width: 100%; }
-.row { display: grid; grid-template-columns: 48px minmax(0, 2.3fr) 130px 64px minmax(0, 2fr); gap: 0 16px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.row { display: grid; grid-template-columns: 40px minmax(0, 1.9fr) 92px 96px minmax(0, 1.1fr) 92px 52px minmax(0, 1.7fr); gap: 0 16px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--rule); }
 .row.head { padding: 8px 0; border-bottom: 1px solid var(--rule-strong); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); align-items: end; }
-.row.bk { grid-template-columns: 48px minmax(0, 2.3fr) 100px 64px minmax(0, 2fr); }
+.row.bk { grid-template-columns: 40px minmax(0, 1.9fr) 92px 96px minmax(0, 1.1fr) 72px 52px minmax(0, 1.7fr); }
+.row .cell { font-size: 14px; color: var(--ink-soft); padding-top: 3px; overflow-wrap: anywhere; }
+.row .cell-a { text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+.row.head .cell-a { text-align: right; }
+.row .descc .meta { display: none; }
 .row .no { color: var(--ink-soft); font-size: 14px; padding-top: 3px; }
 .row .desc { font-weight: 500; }
 .row .meta { display: block; color: var(--ink-soft); font-weight: 400; font-size: 14px; margin-top: 2px; }
 .row .owner select, .row .ownertxt { font-size: 14px; }
 .row .owner select { width: 100%; background: transparent; border: 1px solid transparent; border-bottom-color: var(--rule); padding: 4px 2px; border-radius: 0; }
 .row .owner select:hover { border-bottom-color: var(--ink); }
-.row .ownertxt { padding-top: 4px; display: inline-block; color: var(--ink-soft); }
+.row .ownertxt { padding-top: 3px; display: inline-block; color: var(--ink-soft); }
 .row.done .desc { color: var(--ink-soft); }
 .row.flag { background-color: var(--red-wash); margin: 0 -10px; padding-left: 10px; padding-right: 10px; }
 .note { font-family: var(--font-pencil); font-size: 21px; line-height: 1.15; color: var(--blue); padding-top: 2px; }
@@ -136,7 +140,7 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
 
 /* legend foot */
 .legend { position: fixed; left: 0; right: 0; bottom: 0; background: var(--paper); border-top: 3px double var(--rule-strong); padding: 10px var(--pad) calc(10px + env(safe-area-inset-bottom)); z-index: 10; }
-.legend ul { list-style: none; margin: 0 auto; padding: 0; max-width: 1180px; display: flex; flex-wrap: wrap; gap: 4px 22px; font-size: 13px; }
+.legend ul { list-style: none; margin: 0 auto; padding: 0; max-width: 1320px; display: flex; flex-wrap: wrap; gap: 4px 22px; font-size: 13px; }
 .legend li { display: inline-flex; align-items: center; gap: 7px; }
 .legend .tick { width: 18px; height: 18px; }
 .legend .ttl { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
@@ -221,6 +225,8 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
 /* responsive */
 @media (max-width: 760px) {
   .row { grid-template-columns: 34px minmax(0, 1fr) 44px; gap: 4px 10px; }
+  .row .cell { display: none; }
+  .row .descc .meta { display: block; }
   .row.head { display: none; }
   .row .no { grid-row: 1; grid-column: 1; }
   .row .descc { grid-column: 2; grid-row: 1; }
@@ -525,6 +531,9 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
     }
     return '<div class="' + cls + '"><div class="no num">' + item.no + '</div>' +
       '<div class="descc"><span class="desc">' + esc(item.desc) + '</span><span class="meta">' + meta + '</span></div>' +
+      '<div class="cell cell-d num">' + (esc(item.date) || '\u2014') + '</div>' +
+      '<div class="cell cell-a">' + (money(item.amount) || '\u2014') + '</div>' +
+      '<div class="cell cell-s">' + (esc(item.source) || '\u2014') + '</div>' +
       owner + tickCell(item, mode === 'client') + note + '</div>';
   }
 
@@ -536,7 +545,7 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
       if (!last || last.key !== k) { last = { key: k, items: [] }; groups.push(last); }
       last.items.push(it);
     });
-    var headRow = '<div class="row head' + (mode === 'bk' ? ' bk' : '') + '" aria-hidden="true"><div>No.</div><div>Item</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
+    var headRow = '<div class="row head' + (mode === 'bk' ? ' bk' : '') + '" aria-hidden="true"><div>No.</div><div>Item</div><div>Date</div><div class="cell-a">Amount</div><div>Account</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
     return '<div class="ledger">' + groups.map(function (g) {
       var open = g.items.filter(function (i) { return i.status === 'waiting' || i.status === 'jeff'; }).length;
       var flag = g.items.filter(function (i) { return i.status === 'missing'; }).length;
