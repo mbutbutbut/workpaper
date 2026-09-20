@@ -190,6 +190,21 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
 .mhead .mcount svg { width: 16px; height: 16px; }
 .month .row.head { border-top: 0; }
 
+/* jeff: plain words, reasons, no reflow */
+.jrow.resolved .jdesc { color: var(--ink-soft); }
+.jrow .jstate { font-weight: 600; }
+.jrow .jchange { justify-self: start; }
+.reason { border: 1.5px solid var(--ink); padding: 12px; border-radius: 3px; background: #fff; display: grid; gap: 8px; }
+.reason label { font-weight: 600; }
+.reason input { width: 100%; border: 1px solid var(--ink-soft); padding: 10px; border-radius: 3px; min-height: 44px; background: #fff; }
+.reason .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.reason .err { color: var(--red); font-weight: 500; }
+.warnlist li { align-items: flex-start; }
+.preview { width: 100%; border-collapse: collapse; font-size: 14px; margin: 0 0 12px; }
+.preview th { text-align: left; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); padding: 6px 8px 6px 0; border-bottom: 1px solid var(--rule-strong); }
+.preview td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--rule); }
+.preview .bad { color: var(--red); font-weight: 600; }
+
 /* history + review */
 .histbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 14px; color: var(--ink-soft); }
 .histbar select { border: 1px solid var(--ink-soft); background: var(--paper); padding: 6px 8px; border-radius: 3px; font-size: 14px; min-height: 34px; }
@@ -454,12 +469,21 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
       (ui.importMsg ? '<span class="' + ui.importMsg.kind + '" role="status">' + esc(ui.importMsg.text) + '</span>' : '') + '</div>';
     if (pd) {
       var st = pd.stats;
-      h += '<div class="review" role="region" aria-label="Import review"><h3>' + st.total + ' rows read</h3><ul>' +
+      h += '<div class="review warnlist" role="region" aria-label="Import review"><h3>' + st.total + ' rows read</h3><ul>' +
         '<li>' + glyph('hubdoc') + '<span><b>' + st.carried + '</b> already tracked. Status and notes carry over.</span></li>' +
         '<li>' + glyph('waiting') + '<span><b>' + st.fresh + '</b> new. These start as waiting on you.</span></li>' +
         (st.twins ? '<li>' + glyph('missing') + '<span><b>' + st.twins + '</b> ' + (st.twins === 1 ? 'row repeats' : 'rows repeat') + ' an earlier row exactly (same date, amount, description and account). Kept as separate items.</span></li>' : '') +
+        (st.warn && st.warn.noDate ? '<li>' + glyph('missing') + '<span><b>' + st.warn.noDate + '</b> ' + (st.warn.noDate === 1 ? 'row has' : 'rows have') + ' no date. ' + (st.warn.noDate === 1 ? 'It goes' : 'They go') + ' under \u201cNo date\u201d.</span></li>' : '') +
+        (st.warn && st.warn.badAmount ? '<li>' + glyph('missing') + '<span><b>' + st.warn.badAmount + '</b> ' + (st.warn.badAmount === 1 ? 'row has an amount' : 'rows have amounts') + ' that is not a number.</span></li>' : '') +
+        (st.warn && st.warn.noAmount ? '<li>' + glyph('missing') + '<span><b>' + st.warn.noAmount + '</b> ' + (st.warn.noAmount === 1 ? 'row has' : 'rows have') + ' no amount.</span></li>' : '') +
         (st.dropped ? '<li>' + glyph('explained') + '<span><b>' + st.dropped + '</b> ' + (st.dropped === 1 ? 'item from the current request is' : 'items from the current request are') + ' not in this sheet. Kept in history.</span></li>' : '') +
         '</ul>';
+      if (pd.preview && pd.preview.length) {
+        h += '<table class="preview"><caption class="sr">First rows of the sheet</caption><thead><tr><th>Date</th><th>Item</th><th>Amount</th></tr></thead><tbody>' +
+          pd.preview.map(function (r) {
+            return '<tr><td' + (r.problems.indexOf('noDate') > -1 ? ' class="bad"' : '') + '>' + (esc(r.date) || 'missing') + '</td><td>' + esc(r.desc) + '</td><td class="num' + ((r.problems.indexOf('badAmount') > -1 || r.problems.indexOf('noAmount') > -1) ? ' bad' : '') + '">' + (r.amount === '' ? 'missing' : (isNaN(parseFloat(r.amount)) ? esc(r.amount) : money(r.amount))) + '</td></tr>';
+          }).join('') + '</tbody></table>';
+      }
       if (!st.fresh && !st.dropped) {
         h += '<p class="ok" style="margin:0 0 10px">Nothing new: this sheet matches the current request, so nothing was added.</p><button class="btn" type="button" data-act="discardpending">Discard</button>';
       } else {
@@ -561,24 +585,40 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
   }
 
   /* ---------- jeff ---------- */
+  var JEFF_WORD = { jeff: 'Waiting for you', hubdoc: 'Done', missing: 'Can’t find', explained: 'No document', waiting: 'Waiting' };
+
   function renderJeff() {
-    var mine = state.items.filter(function (i) { return i.owner === 'jeff'; });
+    var mine = state.items.filter(function (i) { return i.owner === 'jeff'; }).sort(function (a, b) { return a.no - b.no; });
     var waiting = mine.filter(function (i) { return i.status === 'jeff'; }).length;
     var head = '<div class="sheet-head"><div><h1>Your list</h1><p>' + (mine.length ? (waiting ? waiting + ' of ' + mine.length + ' items still need you.' : 'All ' + mine.length + ' items are dealt with. Thank you.') : 'Nothing has been passed to you yet.') + '</p></div></div>';
     var body;
     if (!mine.length) {
       body = '<div class="empty"><h2>Nothing for you yet</h2><p>When the client passes purchases to you, they will show up here.</p></div>';
     } else {
-      body = '<div role="list">' + mine.sort(function (a, b) { return (a.status === 'jeff' ? 0 : 1) - (b.status === 'jeff' ? 0 : 1) || a.no - b.no; }).map(function (i) {
-        function b(k, txt) {
-          return '<button type="button" data-jset="' + i.id + ':' + k + '" aria-pressed="' + (i.status === k) + '">' + glyph(k) + txt + '</button>';
+      body = '<div role="list">' + mine.map(function (i) {
+        var open = i.status === 'jeff';
+        var meta = 'Item ' + i.no + ' · ' + esc(i.date) + (i.amount ? ' · <span class="num">' + money(i.amount) + '</span>' : '');
+        var action;
+        if (ui.explainFor === i.id) {
+          action = '<div class="reason"><label for="jr' + i.id + '">Why is there no document?</label>' +
+            '<input id="jr' + i.id + '" type="text" value="' + esc(i.note) + '" placeholder="e.g. Paid cash, no receipt was given">' +
+            (ui.reasonErr === i.id ? '<span class="err" role="alert">Add a short reason so the bookkeeper knows.</span>' : '') +
+            '<div class="acts"><button type="button" class="btn primary" data-jsave="' + i.id + '">Save</button><button type="button" class="btn" data-jcancel="1">Cancel</button></div></div>';
+        } else if (open) {
+          action = '<div class="jacts">' +
+            '<button type="button" data-jset="' + i.id + ':hubdoc">' + glyph('hubdoc') + 'Got it</button>' +
+            '<button type="button" data-jset="' + i.id + ':missing">' + glyph('missing') + 'Can’t find</button>' +
+            '<button type="button" data-jset="' + i.id + ':explained">' + glyph('explained') + 'No document</button></div>';
+        } else {
+          action = '<button type="button" class="btn small jchange" data-jchange="' + i.id + '">Change</button>';
         }
-        return '<div class="jrow" role="listitem"><div class="top">' + glyph(i.status, ui.drawId === i.id) + '<div><div class="jdesc">' + esc(i.desc) + '</div><div class="meta">Item ' + i.no + ' · ' + esc(i.date) + (i.amount ? ' · <span class="num">' + money(i.amount) + '</span>' : '') + ' · ' + esc(STATUS[i.status].label) + '</div></div></div>' +
-          '<div class="jacts">' + b('hubdoc', 'Uploaded') + b('missing', 'Can’t find') + b('explained', 'Explain') + '</div>' +
+        return '<div class="jrow' + (open ? '' : ' resolved') + '" role="listitem"><div class="top">' + glyph(i.status, ui.drawId === i.id) +
+          '<div><div class="jdesc">' + esc(i.desc) + '</div><div class="meta">' + meta + ' · <span class="jstate">' + esc(JEFF_WORD[i.status]) + '</span></div></div></div>' +
+          action +
           '<div><label class="sr" for="jn' + i.id + '">Note for item ' + i.no + '</label><input class="note-in" id="jn' + i.id + '" data-note="' + i.id + '" value="' + esc(i.note) + '" placeholder="Add a note, e.g. what this was for"></div></div>';
       }).join('') + '</div>';
     }
-    return strip() + '<main id="main">' + head + body + '</main>' + legend();
+    return strip() + '<main id="main">' + head + body + '</main>';
   }
 
   /* ---------- render ---------- */
@@ -644,7 +684,10 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
       var amt = amtRaw !== '' && !isNaN(parseFloat(amtRaw)) ? parseFloat(amtRaw).toFixed(2) : amtRaw;
       if (!(name || memo) || !(date || amt)) return;
       var src = iSrc > -1 ? cellText(r[iSrc]).replace(/^\d{3,5}\s+/, '') : '';
-      items.push({ date: date, amount: amt, desc: name || memo, memo: name ? memo : '', source: src, note: iNote > -1 ? cellText(r[iNote]) : '' });
+      var problems = [];
+      if (!date) problems.push('noDate');
+      if (amt === '') problems.push('noAmount'); else if (isNaN(parseFloat(amt)) || !/^-?[\d.]+$/.test(amt)) problems.push('badAmount');
+      items.push({ date: date, amount: amt, desc: name || memo, memo: name ? memo : '', source: src, note: iNote > -1 ? cellText(r[iNote]) : '', problems: problems });
     });
     if (!items.length) return { error: 'Found the header row but no transactions under it.' };
     var title = h > 0 ? [cellText(rows[0][0]), cellText(rows[Math.min(2, h - 1)][0])].filter(Boolean).join(', ') : '';
@@ -657,20 +700,22 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
     state.history.slice().reverse().forEach(function (hs) { hs.items.forEach(function (it) { known[it.fp] = it; }); });
     state.items.forEach(function (it) { known[it.fp] = it; });
     stampFingerprints(table.items);
-    var carried = 0, fresh = 0, twins = 0, seenFp = {};
+    var carried = 0, fresh = 0, twins = 0, seenFp = {}, warn = { noDate: 0, noAmount: 0, badAmount: 0 };
     var stamp = Date.now();
     var items = table.items.map(function (it, n) {
       var old = known[it.fp];
       var out = { id: 'i' + stamp + '_' + n, no: n + 1, date: it.date, desc: it.desc, memo: it.memo, amount: it.amount, source: it.source, fp: it.fp,
         owner: old ? old.owner : 'me', status: old ? old.status : 'waiting', note: old ? old.note : it.note, isNew: !old && (state.items.length > 0) };
       if (old) carried++; else fresh++;
+      (it.problems || []).forEach(function (k) { warn[k]++; });
       if (/#[1-9]\d*$/.test(it.fp)) twins++;
       seenFp[it.fp] = 1;
       return out;
     });
     var dropped = state.items.filter(function (it) { return !seenFp[it.fp]; }).length;
     var today = new Date().toISOString().slice(0, 10);
-    return { name: table.title || ('Request ' + today), items: items, stats: { total: items.length, carried: carried, fresh: fresh, twins: twins, dropped: dropped } };
+    return { name: table.title || ('Request ' + today), items: items, stats: { total: items.length, carried: carried, fresh: fresh, twins: twins, dropped: dropped, warn: warn },
+      preview: table.items.slice(0, 5) };
   }
 
   function stageRows(rows) {
@@ -747,6 +792,7 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
     it.status = key;
     if (!byJeff) {
       if (key === 'jeff') it.owner = 'jeff';
+      if (key === 'waiting') it.owner = 'me';
     }
     ui.drawId = id; ui.menuFor = null;
     save();
@@ -783,10 +829,19 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
     if (d.menu) { ui.menuFor = ui.menuFor === d.menu ? null : d.menu; render(ui.menuFor ? '.menu button[aria-checked="true"], .menu button' : '[data-menu="' + d.menu + '"]'); return; }
     if (d.set) { var p = d.set.split(':'); setStatus(p[0], p[1], false); render('[data-menu="' + p[0] + '"]'); return; }
     if (d.jset) {
-      var q = d.jset.split(':'); setStatus(q[0], q[1], true);
-      render(q[1] === 'explained' ? '#jn' + q[0] : '[data-jset="' + d.jset + '"]');
-      return;
+      var q = d.jset.split(':');
+      if (q[1] === 'explained') { ui.explainFor = q[0]; ui.reasonErr = null; render('#jr' + q[0]); return; }
+      setStatus(q[0], q[1], true); render('[data-jchange="' + q[0] + '"]'); return;
     }
+    if (d.jsave) {
+      var reason = ((document.getElementById('jr' + d.jsave) || {}).value || '').trim();
+      if (!reason) { ui.reasonErr = d.jsave; render('#jr' + d.jsave); return; }
+      var ji = state.items.find(function (x) { return x.id === d.jsave; });
+      ji.note = reason; pushItem(ji, { note: reason });
+      ui.explainFor = null; ui.reasonErr = null; setStatus(d.jsave, 'explained', true); render('[data-jchange="' + d.jsave + '"]'); return;
+    }
+    if (d.jcancel) { ui.explainFor = null; ui.reasonErr = null; render(); return; }
+    if (d.jchange) { setStatus(d.jchange, 'jeff', true); render('[data-jset="' + d.jchange + ':hubdoc"]'); return; }
     if (ui.menuFor) { ui.menuFor = null; render(); }
   });
 
@@ -795,7 +850,8 @@ main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(-
     if (t.dataset.owner) {
       var it = state.items.find(function (x) { return x.id === t.dataset.owner; });
       it.owner = t.value;
-      if (t.value === 'jeff' && it.status === 'waiting') { it.status = 'jeff'; ui.drawId = it.id; }
+      // Handing an item over is one action: it always lands as With Jeff, and taking it back reopens it.
+      if (t.value === 'jeff' && it.status !== 'jeff') { it.status = 'jeff'; ui.drawId = it.id; }
       if (t.value === 'me' && it.status === 'jeff') { it.status = 'waiting'; ui.drawId = it.id; }
       save(); pushItem(it, { owner: it.owner, status: it.status }); render('#o' + it.id); return;
     }
