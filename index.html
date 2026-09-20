@@ -100,7 +100,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 /* ledger table */
 .ledger { width: 100%; }
 .row { display: grid; grid-template-columns: 40px minmax(0, 1.9fr) 92px 96px minmax(0, 1.1fr) 92px 52px minmax(0, 1.7fr); gap: 0 16px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--rule); }
-.row.head { padding: 8px 0; border-bottom: 1px solid var(--rule-strong); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); align-items: end; }
+.row.head { padding: 8px 0; border-bottom: 1px solid var(--rule-strong); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); align-items: baseline; }
 .row.bk { grid-template-columns: 40px minmax(0, 1.9fr) 92px 96px minmax(0, 1.1fr) 72px 52px minmax(0, 1.7fr); }
 .row .cell { font-size: 14px; color: var(--ink-soft); padding-top: 3px; overflow-wrap: anywhere; }
 .row .cell-a { text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -186,10 +186,10 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .jrow .note-in { min-height: 40px; }
 
 /* sortable headers */
-.hsort { display: inline-flex; align-items: center; gap: 4px; padding: 0; margin: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; min-height: 24px; }
+.hsort { display: inline-flex; align-items: baseline; gap: 4px; padding: 6px 0; margin: -6px 0; border: 0; background: none; font: inherit; line-height: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; }
 .hsort:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .hsort.on { color: var(--ink); }
-.hsort svg { width: 10px; height: 10px; fill: currentColor; }
+.hsort svg { width: 10px; height: 10px; fill: currentColor; align-self: center; }
 .cell-a .hsort { justify-content: flex-end; width: 100%; }
 
 /* month groups */
