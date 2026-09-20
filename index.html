@@ -185,6 +185,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .jacts button[aria-pressed="true"] .tick { color: var(--paper); }
 .jrow .note-in { min-height: 40px; }
 
+/* sortable headers */
+.hsort { display: inline-flex; align-items: center; gap: 4px; padding: 0; margin: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; min-height: 24px; }
+.hsort:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.hsort.on { color: var(--ink); }
+.hsort svg { width: 10px; height: 10px; fill: currentColor; }
+.cell-a .hsort { justify-content: flex-end; width: 100%; }
+
 /* month groups */
 .month { margin-top: 22px; }
 .mhead { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; justify-content: space-between; padding: 8px 10px; background: var(--paper-deep); border-top: 3px double var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
@@ -328,7 +335,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   var remote = (CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase) ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey) : null;
   var state = remote ? { items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || { items: sample(), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null };
   if (!state.history) state.history = [];
-  var ui = { loading: !!remote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
+  var ui = { col: null, loading: !!remote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function save() { if (remote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -390,7 +397,14 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       var ma = monthKey(a), mb = monthKey(b);
       if (ma !== mb) return ma - mb;
       if (ui.sort === 'open' && rank[a.status] !== rank[b.status]) return rank[a.status] - rank[b.status];
-      return dayKey(a) - dayKey(b) || a.no - b.no;
+      if (ui.col && ui.col.key === 'amount') {
+        var na = parseFloat(String(a.amount).replace(/[$,]/g, '')), nb = parseFloat(String(b.amount).replace(/[$,]/g, ''));
+        if (isNaN(na) !== isNaN(nb)) return isNaN(na) ? 1 : -1;
+        if (!isNaN(na) && na !== nb) return (na - nb) * ui.col.dir;
+      }
+      var dd = dayKey(a) - dayKey(b);
+      if (ui.col && ui.col.key === 'date') dd *= ui.col.dir;
+      return dd || a.no - b.no;
     });
     return out;
   }
@@ -545,7 +559,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       if (!last || last.key !== k) { last = { key: k, items: [] }; groups.push(last); }
       last.items.push(it);
     });
-    var headRow = '<div class="row head' + (mode === 'bk' ? ' bk' : '') + '" aria-hidden="true"><div>No.</div><div>Item</div><div>Date</div><div class="cell-a">Amount</div><div>Account</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
+    function sortBtn(key, label) {
+      var on = ui.col && ui.col.key === key, dir = on ? ui.col.dir : 0;
+      var tri = dir === -1 ? '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3h8L5 8z"/></svg>' : dir === 1 ? '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 7h8L5 2z"/></svg>' : '';
+      var state = on ? (dir === -1 ? 'sorted ' + (key === 'amount' ? 'largest first' : 'newest first') : 'sorted ' + (key === 'amount' ? 'smallest first' : 'oldest first')) : 'sorted in the default order';
+      return '<button type="button" class="hsort' + (on ? ' on' : '') + '" data-col="' + key + '" aria-label="' + label + ', ' + state + '. Activate to change.">' + label + tri + '</button>';
+    }
+    var headRow = '<div class="row head' + (mode === 'bk' ? ' bk' : '') + '"><div>No.</div><div>Item</div><div>' + sortBtn('date', 'Date') + '</div><div class="cell-a">' + sortBtn('amount', 'Amount') + '</div><div>Account</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
     return '<div class="ledger">' + groups.map(function (g) {
       var open = g.items.filter(function (i) { return i.status === 'waiting' || i.status === 'jeff'; }).length;
       var flag = g.items.filter(function (i) { return i.status === 'missing'; }).length;
@@ -832,6 +852,12 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       if (state.items.length) state.history.unshift({ id: 'h' + Date.now(), name: state.cycle, importedAt: state.importedAt || new Date().toISOString().slice(0, 10), items: state.items });
       state.items = ui.pending.items; state.cycle = nm; state.sample = false; state.importedAt = new Date().toISOString().slice(0, 10);
       ui.pending = null; ui.importOpen = false; ui.importMsg = null; ui.filter = 'all'; ui.viewId = null; save(); render('#main'); return;
+    }
+    if (d.col) {
+      var c = ui.col, k = d.col;
+      if (k === 'date') ui.col = (c && c.key === 'date') ? null : { key: 'date', dir: -1 };
+      else ui.col = !(c && c.key === 'amount') ? { key: 'amount', dir: -1 } : (c.dir === -1 ? { key: 'amount', dir: 1 } : null);
+      render('[data-col="' + k + '"]'); return;
     }
     if (d.filter) { ui.filter = d.filter; render(); return; }
     if (d.sort) { ui.sort = d.sort; render(); return; }
