@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direction previews</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=Special+Elite&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#d9d9d4;font-family:"Public Sans",system-ui,sans-serif;color:#1f2933}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+h1{font-size:1.5rem;margin:0 0 4px}
+.lead{color:#4a5561;margin:0 0 26px;max-width:70ch}
+.pv{margin:0 0 44px}
+.pv>h2{font-size:1.1rem;margin:0 0 2px}
+.pv>p{margin:0 0 12px;color:#4a5561;font-size:14px}
+.frame{border-radius:4px;overflow:hidden;box-shadow:0 10px 30px -12px rgba(0,0,0,.35)}
+.no{font-variant-numeric:tabular-nums}
+
+/* 1 Cabinet drawer */
+.cab{background:#8a6d3b;padding:26px 26px 0}
+.tabs{display:flex;gap:6px;margin-left:16px}
+.tabs span{background:#c9a565;padding:8px 20px;border-radius:8px 8px 0 0;font-weight:600;font-size:14px;color:#3a2e18;box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)}
+.tabs span.on{background:#e3c88f;position:relative;top:1px}
+.folder{background:#e3c88f;padding:22px 26px 30px;border-radius:4px 4px 0 0;box-shadow:inset 0 2px 0 rgba(255,255,255,.35)}
+.folder h3{margin:0 0 2px;font-family:"Special Elite",monospace;font-weight:400;font-size:1.5rem;color:#2a2418}
+.folder .sub{font-family:"Special Elite",monospace;font-size:13px;color:#5a4a2a;margin-bottom:14px}
+.sheet1{background:#f7f0dd;padding:6px 18px;box-shadow:0 2px 6px rgba(0,0,0,.2);border-radius:2px}
+.r1{display:grid;grid-template-columns:34px 1fr 120px;gap:12px;align-items:center;padding:12px 0;border-bottom:1px dashed #c9b98f;font-family:"Special Elite",monospace;font-size:14.5px;color:#2a2418}
+.r1:last-child{border:0}
+.stamp{justify-self:end;font-family:"Barlow Condensed",sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:14px;border:2px solid;padding:2px 8px;transform:rotate(-3deg);border-radius:3px;opacity:.9}
+.s-h{color:#1f2a44}.s-j{color:#5a4a2a}.s-m{color:#b3372b}.s-w{color:#8c7a52;border-style:dashed}.s-e{color:#1f2a44;border-style:double}
+
+/* 2 Workpaper */
+.wp{background:#eaf1e2;padding:26px 30px 0}
+.wp h3{margin:0;font-size:1.7rem;letter-spacing:-.02em}
+.wp .sub{margin:4px 0 12px;color:#4a5561;font-size:14px}
+.tal{display:flex;gap:22px;border-top:3px double #1f2933;border-bottom:1px solid #1f2933;padding:10px 0;font-weight:500;font-size:15px;align-items:center;flex-wrap:wrap}
+.tal svg,.r2 svg,.leg svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.hd2,.r2{display:grid;grid-template-columns:36px 1fr 60px 44px 1.3fr;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid #b7c6aa;font-size:15px}
+.hd2{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4a5561;border-bottom:1px solid #1f2933;padding:8px 0}
+.r2 small{display:block;color:#4a5561;font-size:13px}
+.pen{font-family:Caveat,cursive;font-size:20px;color:#2557a7;line-height:1.1}
+.bl{color:#2557a7}.rd{color:#b8322a}.sl{color:#4a5561}
+.leg{display:flex;gap:20px;flex-wrap:wrap;border-top:3px double #1f2933;padding:12px 0;font-size:13px;margin-top:6px}
+.leg span{display:inline-flex;gap:6px;align-items:center}
+
+/* 3 Jackfield */
+.jf{background:#0b0b0a;padding:22px 26px 26px;color:#f2a33a;font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.06em}
+.jf h3{margin:0;font-size:2rem;font-weight:600}
+.jf .sub{color:#c58a35;font-size:14px;margin:2px 0 16px}
+.jr{display:grid;grid-template-columns:44px 1fr 210px;gap:16px;align-items:center;padding:11px 0;border-top:1px solid #4a3410}
+.jr .n{font-size:18px;color:#a86f1f}
+.jr .t{font-size:18px;font-weight:500}
+.jr .m{display:block;font-size:12px;color:#a86f1f;letter-spacing:.1em}
+.jr svg{width:100%;height:22px}
+.jr svg line,.jr svg circle{stroke:#f2a33a;stroke-width:2;fill:none}
+.jr .lab{font-size:12px;display:block;text-align:right;color:#c58a35}
+.big{background:#f2a33a;color:#0b0b0a;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;font-size:20px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Three directions, same screen</h1>
+<p class="lead">The client's checklist for the March request, drawn three ways with the same sample items. These are static previews to compare looks, not the working app.</p>
+
+<!-- 1 -->
+<section class="pv"><h2>1. The Cabinet Drawer</h2><p>Folder tabs per person; typed sheet inside; a rubber stamp for each status.</p>
+<div class="frame cab">
+  <div class="tabs"><span class="on">Me</span><span>Jeff</span><span>Bookkeeper</span></div>
+  <div class="folder"><h3>March request</h3><div class="sub">7 OPEN &middot; 2 CAN'T FIND &middot; 9 DONE</div>
+    <div class="sheet1">
+      <div class="r1"><span class="no">01</span><span>Warehouse club, office supplies &mdash; $286.40</span><span class="stamp s-h">In Hubdoc</span></div>
+      <div class="r1"><span class="no">02</span><span>Fuel, work truck &mdash; $74.12</span><span class="stamp s-j">With Jeff</span></div>
+      <div class="r1"><span class="no">05</span><span>Stationery store, printer paper &mdash; $63.55</span><span class="stamp s-w">Waiting</span></div>
+      <div class="r1"><span class="no">06</span><span>Incoming e-transfer, unlabelled &mdash; $500.00</span><span class="stamp s-m">Can't find</span></div>
+      <div class="r1"><span class="no">11</span><span>Monthly bank account fee &mdash; $15.00</span><span class="stamp s-e">Explained</span></div>
+      <div class="r1"><span class="no">13</span><span>Office rent, March &mdash; $1,800.00</span><span class="stamp s-h">In Hubdoc</span></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- 2 -->
+<section class="pv"><h2>2. The Workpaper (what I built)</h2><p>Green analysis paper; status is a tickmark; a legend along the foot; notes in blue pencil.</p>
+<div class="frame wp">
+  <h3>March request</h3><div class="sub">From Sample Bookkeeping</div>
+  <div class="tal"><span><svg viewBox="0 0 24 24" class="sl"><rect x="5" y="5" width="14" height="14" rx="1.5"/></svg> <b>7</b> open</span><span><svg viewBox="0 0 24 24" class="rd"><path d="M6 6L18 18M18 6L6 18"/></svg> <b>2</b> can't find</span><span><svg viewBox="0 0 24 24" class="bl"><path d="M4 13.5L9.5 19L20.5 5"/></svg> <b>9</b> done</span></div>
+  <div class="hd2"><span>No.</span><span>Item</span><span>Owner</span><span>Tick</span><span>Note</span></div>
+  <div class="r2"><span class="no">1</span><span>Warehouse club, office supplies<small>Mar 02 &middot; $286.40</small></span><span>Me</span><span class="bl"><svg viewBox="0 0 24 24"><path d="M4 13.5L9.5 19L20.5 5"/></svg></span><span></span></div>
+  <div class="r2"><span class="no">2</span><span>Fuel, work truck<small>Mar 03 &middot; $74.12</small></span><span>Jeff</span><span><svg viewBox="0 0 24 24"><path d="M4 12H18M12.5 6L18.5 12L12.5 18"/></svg></span><span></span></div>
+  <div class="r2"><span class="no">5</span><span>Stationery store, printer paper<small>Mar 05 &middot; $63.55</small></span><span>Me</span><span class="sl"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1.5"/></svg></span><span></span></div>
+  <div class="r2" style="background:#f7e3df"><span class="no">6</span><span>Incoming e-transfer, unlabelled<small>Mar 08 &middot; $500.00</small></span><span>Me</span><span class="rd"><svg viewBox="0 0 24 24"><path d="M6 6L18 18M18 6L6 18"/></svg></span><span class="pen">Can't tell who this is from.</span></div>
+  <div class="r2"><span class="no">11</span><span>Monthly bank account fee<small>Mar 15 &middot; $15.00</small></span><span>Me</span><span class="bl"><svg viewBox="0 0 24 24"><path d="M5 9H19M5 15H19"/></svg></span><span class="pen">No receipt is issued for this.</span></div>
+  <div class="leg"><span class="sl"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1.5"/></svg>Waiting on me</span><span class="bl"><svg viewBox="0 0 24 24"><path d="M4 13.5L9.5 19L20.5 5"/></svg>In Hubdoc</span><span><svg viewBox="0 0 24 24"><path d="M4 12H18M12.5 6L18.5 12L12.5 18"/></svg>With Jeff</span><span class="rd"><svg viewBox="0 0 24 24"><path d="M6 6L18 18M18 6L6 18"/></svg>Can't find</span><span class="bl"><svg viewBox="0 0 24 24"><path d="M5 9H19M5 15H19"/></svg>Explained</span></div>
+</div></section>
+
+<!-- 3 -->
+<section class="pv"><h2>3. The Jackfield</h2><p>Black glass, amber only. State is drawn as a line: solid = in Hubdoc, ticked = with Jeff, gap = can't find, doubled = explained, open ring = waiting.</p>
+<div class="frame jf">
+  <div class="big"><span>March request</span><span>7 open &middot; 2 can't find</span></div>
+  <div class="jr"><span class="n">01</span><span class="t">Warehouse club, office supplies<span class="m">MAR 02 &middot; $286.40</span></span><span><svg viewBox="0 0 210 22"><line x1="0" y1="11" x2="200" y2="11"/></svg><span class="lab">In Hubdoc</span></span></div>
+  <div class="jr"><span class="n">02</span><span class="t">Fuel, work truck<span class="m">MAR 03 &middot; $74.12</span></span><span><svg viewBox="0 0 210 22"><line x1="0" y1="11" x2="200" y2="11"/><line x1="100" y1="4" x2="108" y2="18"/></svg><span class="lab">With Jeff</span></span></div>
+  <div class="jr"><span class="n">05</span><span class="t">Stationery store, printer paper<span class="m">MAR 05 &middot; $63.55</span></span><span><svg viewBox="0 0 210 22"><line x1="0" y1="11" x2="190" y2="11"/><circle cx="200" cy="11" r="6"/></svg><span class="lab">Waiting</span></span></div>
+  <div class="jr"><span class="n">06</span><span class="t">Incoming e-transfer, unlabelled<span class="m">MAR 08 &middot; $500.00</span></span><span><svg viewBox="0 0 210 22"><line x1="0" y1="11" x2="80" y2="11"/><line x1="120" y1="11" x2="200" y2="11"/></svg><span class="lab">Can't find</span></span></div>
+  <div class="jr"><span class="n">11</span><span class="t">Monthly bank account fee<span class="m">MAR 15 &middot; $15.00</span></span><span><svg viewBox="0 0 210 22"><line x1="0" y1="8" x2="200" y2="8"/><line x1="0" y1="14" x2="200" y2="14"/></svg><span class="lab">Explained</span></span></div>
+</div></section>
+</div>
+</body>
+</html>
