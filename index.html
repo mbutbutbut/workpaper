@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workpaper</title>
+<meta name="description" content="One shared checklist for the bookkeeper's document request.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root {
+  --paper: #eaf1e2;
+  --paper-deep: #dde8d2;
+  --ink: #1f2933;
+  --ink-soft: #4a5561;
+  --rule: #b7c6aa;
+  --rule-strong: #1f2933;
+  --blue: #2557a7;
+  --blue-wash: #e4ebf6;
+  --red: #b8322a;
+  --red-wash: #f7e3df;
+  --focus: #2557a7;
+  --font-ui: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-pencil: "Caveat", "Segoe Print", cursive;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --pad: clamp(16px, 4vw, 40px);
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+::selection { background: var(--blue); color: var(--paper); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+input, textarea, select { font: inherit; color: inherit; caret-color: var(--blue); }
+.num { font-variant-numeric: tabular-nums; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+[hidden] { display: none !important; }
+
+/* buttons */
+.btn {
+  border: 1.5px solid var(--ink);
+  background: transparent;
+  padding: 9px 16px;
+  min-height: 40px;
+  font-weight: 600;
+  border-radius: 3px;
+  transition: background-color .15s, color .15s;
+}
+.btn:hover { background: var(--paper-deep); }
+.btn.primary { background: var(--ink); color: var(--paper); }
+.btn.primary:hover { background: #303c49; }
+.btn.small { min-height: 34px; padding: 5px 12px; font-size: 14px; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.link { background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 3px; color: var(--blue); font-weight: 500; }
+
+/* prototype strip */
+.strip {
+  display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between;
+  padding: 8px var(--pad);
+  background: var(--paper-deep);
+  border-bottom: 1px solid var(--rule);
+  font-size: 13px; color: var(--ink-soft);
+}
+.strip .who strong { color: var(--ink); font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--ink-soft); border-radius: 3px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 5px 12px; font-size: 13px; font-weight: 500; }
+.seg button + button { border-left: 1px solid var(--ink-soft); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+/* sheet */
+main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 var(--pad) 120px; }
+.sheet-head { padding: 28px 0 16px; display: flex; flex-wrap: wrap; gap: 14px 24px; justify-content: space-between; align-items: flex-end; }
+.sheet-head h1 { margin: 0; font-size: clamp(1.6rem, 3vw + .5rem, 2.4rem); line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+.sheet-head p { margin: 6px 0 0; color: var(--ink-soft); max-width: 60ch; }
+.tally { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 12px 0; border-top: 3px double var(--rule-strong); border-bottom: 1px solid var(--rule-strong); margin-bottom: 4px; font-weight: 500; }
+.tally span { display: inline-flex; align-items: center; gap: 8px; }
+.tally svg { width: 22px; height: 22px; }
+.tally b { font-weight: 700; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding: 12px 0; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.tabs button { border: 0; background: transparent; padding: 7px 12px; font-weight: 500; color: var(--ink-soft); border-bottom: 2px solid transparent; }
+.tabs button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+.sortlbl { font-size: 14px; color: var(--ink-soft); display: inline-flex; gap: 8px; align-items: center; }
+
+/* ledger table */
+.ledger { width: 100%; }
+.row { display: grid; grid-template-columns: 48px minmax(0, 2.3fr) 130px 64px minmax(0, 2fr); gap: 0 16px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.row.head { padding: 8px 0; border-bottom: 1px solid var(--rule-strong); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); align-items: end; }
+.row.bk { grid-template-columns: 48px minmax(0, 2.3fr) 100px 64px minmax(0, 2fr); }
+.row .no { color: var(--ink-soft); font-size: 14px; padding-top: 3px; }
+.row .desc { font-weight: 500; }
+.row .meta { display: block; color: var(--ink-soft); font-weight: 400; font-size: 14px; margin-top: 2px; }
+.row .owner select, .row .ownertxt { font-size: 14px; }
+.row .owner select { width: 100%; background: transparent; border: 1px solid transparent; border-bottom-color: var(--rule); padding: 4px 2px; border-radius: 0; }
+.row .owner select:hover { border-bottom-color: var(--ink); }
+.row .ownertxt { padding-top: 4px; display: inline-block; color: var(--ink-soft); }
+.row.done .desc { color: var(--ink-soft); }
+.row.flag { background-color: var(--red-wash); margin: 0 -10px; padding-left: 10px; padding-right: 10px; }
+.note { font-family: var(--font-pencil); font-size: 21px; line-height: 1.15; color: var(--blue); padding-top: 2px; }
+.note-in { width: 100%; border: 1px solid transparent; border-bottom: 1px dashed var(--rule); background: transparent; padding: 3px 2px; font-family: var(--font-pencil); font-size: 21px; color: var(--blue); border-radius: 0; }
+.note-in::placeholder { color: #8c98a6; font-family: var(--font-ui); font-size: 14px; }
+.note-in:hover { border-bottom-color: var(--ink-soft); }
+.note-in:focus { outline: none; border-bottom: 1px solid var(--blue); background: var(--blue-wash); }
+
+/* tick */
+.tick-cell { position: relative; }
+.tickbtn { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid transparent; background: transparent; border-radius: 3px; padding: 0; margin: -6px 0 0 -6px; }
+.tickbtn:hover { border-color: var(--ink-soft); background: var(--paper-deep); }
+.tickbtn[aria-expanded="true"] { border-color: var(--ink); background: var(--paper-deep); }
+.tick { width: 26px; height: 26px; overflow: visible; }
+.tick .g { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.t-waiting { color: var(--ink-soft); } .t-hubdoc { color: var(--blue); } .t-jeff { color: var(--ink); }
+.t-missing { color: var(--red); } .t-explained { color: var(--blue); }
+.tick.draw .g { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .45s var(--ease-out) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.menu { position: absolute; z-index: 20; top: 38px; left: -8px; width: 232px; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 0 8px 20px -6px rgba(31,41,51,.28); padding: 4px; }
+.menu button { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 2px; min-height: 40px; }
+.menu button:hover, .menu button:focus-visible { background: var(--paper-deep); }
+.menu button[aria-checked="true"] { font-weight: 700; }
+.menu .tick { width: 22px; height: 22px; flex: none; }
+
+/* legend foot */
+.legend { position: fixed; left: 0; right: 0; bottom: 0; background: var(--paper); border-top: 3px double var(--rule-strong); padding: 10px var(--pad) calc(10px + env(safe-area-inset-bottom)); z-index: 10; }
+.legend ul { list-style: none; margin: 0 auto; padding: 0; max-width: 1180px; display: flex; flex-wrap: wrap; gap: 4px 22px; font-size: 13px; }
+.legend li { display: inline-flex; align-items: center; gap: 7px; }
+.legend .tick { width: 18px; height: 18px; }
+.legend .ttl { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+
+/* import panel */
+.import { border: 1.5px solid var(--ink); padding: 18px; margin: 8px 0 16px; background: var(--paper); border-radius: 3px; }
+.import h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.import p { margin: 0 0 12px; color: var(--ink-soft); max-width: 66ch; }
+.import textarea { width: 100%; min-height: 130px; border: 1px solid var(--ink-soft); background: #fff; padding: 10px; border-radius: 3px; font-size: 14px; }
+.import .acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+.import .err { color: var(--red); font-weight: 500; }
+.import .ok { color: var(--blue); font-weight: 500; }
+
+/* empty */
+.empty { padding: 56px 0; max-width: 56ch; }
+.empty h2 { margin: 0 0 8px; font-size: 1.4rem; }
+.empty p { color: var(--ink-soft); margin: 0 0 18px; }
+
+/* login */
+.login { flex: 1; display: grid; place-items: center; padding: 40px var(--pad) 60px; }
+.login-sheet { width: min(440px, 100%); }
+.login-sheet h1 { margin: 0 0 6px; font-size: 2.2rem; letter-spacing: -0.02em; line-height: 1.05; }
+.login-sheet .sub { color: var(--ink-soft); margin: 0 0 26px; }
+.login-sheet .rule { border-top: 3px double var(--rule-strong); border-bottom: 1px solid var(--rule-strong); height: 8px; margin-bottom: 26px; }
+.login-sheet label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
+.login-sheet input { width: 100%; border: 1px solid var(--ink); background: #fff; padding: 11px 12px; border-radius: 3px; min-height: 44px; margin-bottom: 14px; }
+.login-sheet .btn { width: 100%; }
+.proto { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--rule); }
+.proto p { margin: 0 0 10px; font-size: 14px; color: var(--ink-soft); }
+.proto .btns { display: grid; gap: 8px; }
+
+/* jeff list */
+.jrow { padding: 18px 0; border-bottom: 1px solid var(--rule); display: grid; gap: 10px; }
+.jrow .top { display: flex; gap: 12px; align-items: flex-start; }
+.jrow .top .tick { width: 30px; height: 30px; margin-top: 2px; flex: none; }
+.jrow .jdesc { font-weight: 600; font-size: 1.05rem; }
+.jrow .meta { color: var(--ink-soft); font-size: 14px; }
+.jacts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.jacts button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; min-height: 64px; border: 1.5px solid var(--ink-soft); background: transparent; border-radius: 3px; font-size: 13px; font-weight: 600; text-align: center; }
+.jacts button .tick { width: 22px; height: 22px; }
+.jacts button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.jacts button[aria-pressed="true"] .tick { color: var(--paper); }
+.jrow .note-in { min-height: 40px; }
+
+/* month groups */
+.month { margin-top: 22px; }
+.mhead { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; justify-content: space-between; padding: 8px 10px; background: var(--paper-deep); border-top: 3px double var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.mhead h2 { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
+.mhead .mcount { font-size: 14px; color: var(--ink-soft); font-weight: 500; display: inline-flex; gap: 14px; align-items: center; }
+.mhead .mcount span { display: inline-flex; gap: 6px; align-items: center; }
+.mhead .mcount svg { width: 16px; height: 16px; }
+.month .row.head { border-top: 0; }
+
+/* history + review */
+.histbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 14px; color: var(--ink-soft); }
+.histbar select { border: 1px solid var(--ink-soft); background: var(--paper); padding: 6px 8px; border-radius: 3px; font-size: 14px; min-height: 34px; }
+.pastbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 10px 14px; margin-bottom: 8px; background: var(--blue-wash); border: 1px solid var(--blue); border-radius: 3px; font-weight: 500; }
+.review { margin-top: 14px; padding-top: 14px; border-top: 3px double var(--rule-strong); }
+.review h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.review ul { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 4px; }
+.review li { display: flex; gap: 10px; align-items: center; }
+.review li svg { width: 20px; height: 20px; flex: none; }
+.review label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; }
+.review input[type=text] { width: min(420px, 100%); border: 1px solid var(--ink); background: #fff; padding: 8px 10px; border-radius: 3px; min-height: 40px; margin-bottom: 12px; }
+.new-badge { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); border: 1px solid var(--blue); padding: 0 6px; border-radius: 2px; vertical-align: 2px; }
+
+/* responsive */
+@media (max-width: 760px) {
+  .row { grid-template-columns: 34px minmax(0, 1fr) 44px; gap: 4px 10px; }
+  .row.head { display: none; }
+  .row .no { grid-row: 1; grid-column: 1; }
+  .row .descc { grid-column: 2; grid-row: 1; }
+  .row .tick-cell { grid-column: 3; grid-row: 1; }
+  .row .owner, .row .ownertxt { grid-column: 2 / 4; grid-row: 2; }
+  .row .notec { grid-column: 2 / 4; grid-row: 3; }
+  .row.bk { grid-template-columns: 34px minmax(0, 1fr) 44px; }
+  .row.flag { margin: 0 -8px; padding-left: 8px; padding-right: 8px; }
+  .menu { left: auto; right: -4px; }
+  .legend ul { gap: 4px 14px; font-size: 12px; }
+  .legend .ttl { display: none; }
+  main { padding-bottom: 150px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tick.draw .g { animation: none; stroke-dashoffset: 0; }
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- glyphs: the tickmark legend ---------- */
+  var STATUS = {
+    waiting:   { label: 'Waiting on me', short: 'Waiting',   cls: 't-waiting',   open: true,  path: '<rect class="g" x="5" y="5" width="14" height="14" rx="1.5" pathLength="1"/>' },
+    hubdoc:    { label: 'In Hubdoc',     short: 'In Hubdoc', cls: 't-hubdoc',    open: false, path: '<path class="g" d="M4 13.5 L9.5 19 L20.5 5" pathLength="1"/>' },
+    jeff:      { label: 'With Jeff',     short: 'With Jeff', cls: 't-jeff',      open: true,  path: '<path class="g" d="M4 12 H18 M12.5 6 L18.5 12 L12.5 18" pathLength="1"/>' },
+    missing:   { label: "Can't find",    short: "Can't find",cls: 't-missing',   open: true,  path: '<path class="g" d="M6 6 L18 18 M18 6 L6 18" pathLength="1"/>' },
+    explained: { label: 'Explained',     short: 'Explained', cls: 't-explained', open: false, path: '<path class="g" d="M5 9 H19 M5 15 H19" pathLength="1"/>' }
+  };
+  var ORDER = ['waiting', 'hubdoc', 'jeff', 'missing', 'explained'];
+
+  function glyph(key, draw) {
+    return '<svg class="tick ' + STATUS[key].cls + (draw ? ' draw' : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + STATUS[key].path + '</svg>';
+  }
+
+  /* ---------- fingerprints ---------- */
+  function fpBase(date, amount, memo, source) {
+    var n = parseFloat(String(amount).replace(/[$,]/g, ''));
+    var amt = isNaN(n) ? String(amount).trim() : n.toFixed(2);
+    return [String(date).trim().toLowerCase(), amt, String(memo).toLowerCase().replace(/\s+/g, ' ').trim(), String(source).toLowerCase().trim()].join('|');
+  }
+  // identical rows within one sheet get #0, #1 ... so twin purchases are kept apart but still match next time
+  function stampFingerprints(items) {
+    var seen = {};
+    items.forEach(function (it) {
+      var b = fpBase(it.date, it.amount, it.memo || it.desc, it.source);
+      seen[b] = (seen[b] || 0);
+      it.fp = b + '#' + seen[b]++;
+    });
+    return items;
+  }
+
+  /* ---------- sample data (synthetic) ---------- */
+  function makeItems(rows, prefix) {
+    return stampFingerprints(rows.map(function (r, i) {
+      return { id: prefix + (i + 1), no: i + 1, date: r[0], desc: r[1], memo: '', amount: r[2], owner: r[3], status: r[4], note: r[5], source: r[6] || 'Business card A' };
+    }));
+  }
+  function sample() {
+    return makeItems([
+      ['03/02/2026', 'Warehouse club, office supplies', '286.40', 'me', 'hubdoc', ''],
+      ['03/03/2026', 'Fuel, work truck', '74.12', 'jeff', 'jeff', '', 'Business card B'],
+      ['03/04/2026', 'Building supply, lumber and fasteners', '412.18', 'jeff', 'jeff', '', 'Business card B'],
+      ['03/04/2026', 'Auto insurance premium', '198.00', 'me', 'hubdoc', '', 'Chequing'],
+      ['03/05/2026', 'Stationery store, printer paper', '63.55', 'me', 'waiting', ''],
+      ['03/08/2026', 'Incoming e-transfer, unlabelled', '500.00', 'me', 'missing', "Can't tell who this is from. Checking the bank app.", 'Chequing'],
+      ['03/09/2026', 'Client lunch meeting', '48.90', 'me', 'waiting', ''],
+      ['03/11/2026', 'Paint supplier, job site', '129.77', 'jeff', 'jeff', '', 'Business card B'],
+      ['03/12/2026', 'Mobile plan', '95.00', 'me', 'hubdoc', ''],
+      ['03/14/2026', 'Online order, hand tools', '217.34', 'jeff', 'hubdoc', 'Uploaded from his email receipt.', 'Business card B'],
+      ['03/15/2026', 'Monthly bank account fee', '15.00', 'me', 'explained', 'No receipt is issued for this. See statement.', 'Chequing'],
+      ['03/17/2026', 'Parking, downtown job', '22.00', 'jeff', 'jeff', '', 'Business card B'],
+      ['03/18/2026', 'Office rent, March', '1800.00', 'me', 'hubdoc', '', 'Chequing'],
+      ['03/19/2026', 'Electricity bill', '144.20', 'me', 'hubdoc', '', 'Chequing'],
+      ['03/21/2026', 'Hardware store, trailer parts', '342.66', 'jeff', 'missing', "Jeff can't find the receipt. Paid cash.", 'Business card B'],
+      ['03/22/2026', 'Software subscription', '39.00', 'me', 'hubdoc', ''],
+      ['03/25/2026', 'Packaging supplier, shipping boxes', '188.40', 'me', 'waiting', ''],
+      ['03/27/2026', 'Cash withdrawal', '300.00', 'me', 'explained', "Paid for Jeff's day labour. No paperwork.", 'Chequing']
+    ], 's');
+  }
+  function sampleHistory() {
+    return [{ id: 'h1', name: 'February request', importedAt: '2026-03-01', items: makeItems([
+      ['02/03/2026', 'Warehouse club, office supplies', '251.10', 'me', 'hubdoc', ''],
+      ['02/09/2026', 'Fuel, work truck', '68.40', 'jeff', 'hubdoc', '', 'Business card B'],
+      ['02/12/2026', 'Office rent, February', '1800.00', 'me', 'hubdoc', '', 'Chequing'],
+      ['02/18/2026', 'Electricity bill', '151.85', 'me', 'hubdoc', '', 'Chequing'],
+      ['02/21/2026', 'Monthly bank account fee', '15.00', 'me', 'explained', 'No receipt is issued for this.', 'Chequing']
+    ], 'h1_') }];
+  }
+
+  /* ---------- state ---------- */
+  var KEY = 'workpaper-prototype-v2';
+  var CFG = window.WORKPAPER_CONFIG || {};
+  var remote = (CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase) ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey) : null;
+  var state = remote ? { items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || { items: sample(), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null };
+  if (!state.history) state.history = [];
+  var ui = { loading: !!remote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
+
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
+  function save() { if (remote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function pastView() { return ui.viewId ? state.history.find(function (h) { return h.id === ui.viewId; }) : null; }
+  function viewItems() { var p = pastView(); return p ? p.items : state.items; }
+  function viewName() { var p = pastView(); return p ? p.name : state.cycle; }
+
+  var ROLE_LABEL = { client: 'Client', jeff: 'Jeff', bookkeeper: 'Bookkeeper' };
+  var ROLE_EMAIL = { client: 'you@example.com', jeff: 'jeff@example.com', bookkeeper: 'books@example.com' };
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function money(a) {
+    if (!a) return '';
+    var n = parseFloat(String(a).replace(/[$,]/g, ''));
+    if (isNaN(n)) return esc(a);
+    var t = Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (n < 0 ? '\u2212$' : '$') + t;
+  }
+
+  function counts() {
+    var c = { waiting: 0, hubdoc: 0, jeff: 0, missing: 0, explained: 0 };
+    viewItems().forEach(function (i) { c[i.status]++; });
+    return c;
+  }
+
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  // Reads MM/DD/YYYY (the accounting export), ISO dates, and "Mar 02" style; swaps to DD/MM when the first part cannot be a month.
+  function parseDate(str) {
+    str = String(str || '').trim();
+    var m = str.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+    if (m) {
+      var a = +m[1], b = +m[2], y = +m[3]; if (y < 100) y += 2000;
+      if (a > 12 && b <= 12) return { y: y, m: b, d: a };
+      if (a <= 12 && b <= 31) return { y: y, m: a, d: b };
+      return null;
+    }
+    m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m && +m[2] <= 12) return { y: +m[1], m: +m[2], d: +m[3] };
+    m = str.match(/^([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:,?\s+(\d{4}))?$/);
+    if (m) {
+      var mi = MONTHS.findIndex(function (n) { return n.toLowerCase().indexOf(m[1].toLowerCase().slice(0, 3)) === 0; });
+      if (mi > -1) return { y: m[3] ? +m[3] : 0, m: mi + 1, d: +m[2] };
+    }
+    return null;
+  }
+  function monthKey(it) { var d = parseDate(it.date); return d ? d.y * 100 + d.m : 999999; }
+  function dayKey(it) { var d = parseDate(it.date); return d ? d.d : 99; }
+  function monthLabel(key) {
+    if (key === 999999) return 'No date';
+    var y = Math.floor(key / 100), m = key % 100;
+    return MONTHS[m - 1] + (y ? ' ' + y : '');
+  }
+
+  // Months run oldest to newest. Inside a month: by date, or open items first.
+  function sorted(list) {
+    var out = list.slice();
+    var rank = { waiting: 0, jeff: 0, missing: 1, hubdoc: 2, explained: 2 };
+    out.sort(function (a, b) {
+      var ma = monthKey(a), mb = monthKey(b);
+      if (ma !== mb) return ma - mb;
+      if (ui.sort === 'open' && rank[a.status] !== rank[b.status]) return rank[a.status] - rank[b.status];
+      return dayKey(a) - dayKey(b) || a.no - b.no;
+    });
+    return out;
+  }
+
+  function filtered(list) {
+    return list.filter(function (i) {
+      if (ui.filter === 'open') return STATUS[i.status].open;
+      if (ui.filter === 'jeff') return i.owner === 'jeff';
+      if (ui.filter === 'done') return !STATUS[i.status].open && i.status !== 'missing';
+      return true;
+    });
+  }
+
+  /* ---------- shared pieces ---------- */
+  function strip() {
+    var role = state.role;
+    var seg = ['client', 'jeff', 'bookkeeper'].map(function (r) {
+      return '<button type="button" data-role="' + r + '" aria-pressed="' + (role === r) + '">' + ROLE_LABEL[r] + '</button>';
+    }).join('');
+    var who = remote ? state.user : ROLE_EMAIL[role];
+    return '<div class="strip"><span class="who">Signed in as <strong>' + esc(who) + '</strong> &middot; ' + ROLE_LABEL[role] + '</span>' +
+      '<span style="display:inline-flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+      (remote ? '' : '<span>Prototype, view as</span><span class="seg" role="group" aria-label="View as">' + seg + '</span>') +
+      '<button type="button" class="link" data-act="signout">Sign out</button></span></div>' +
+      (ui.error ? '<div class="pastbar" role="alert" style="margin:8px var(--pad) 0;background:var(--red-wash);border-color:var(--red)"><span>' + esc(ui.error) + '</span><button type="button" class="btn small" data-act="dismisserr">Dismiss</button></div>' : '');
+  }
+
+  function tally() {
+    var c = counts();
+    var open = c.waiting + c.jeff;
+    var parts = [
+      '<span>' + glyph('waiting') + '<b class="num">' + open + '</b> open</span>',
+      '<span>' + glyph('missing') + '<b class="num">' + c.missing + '</b> can’t find</span>',
+      '<span>' + glyph('hubdoc') + '<b class="num">' + (c.hubdoc + c.explained) + '</b> done</span>'
+    ];
+    return '<div class="tally" aria-label="Summary">' + parts.join('') + '</div>';
+  }
+
+  function legend() {
+    return '<footer class="legend"><ul aria-label="Tickmark legend"><li class="ttl">Tickmarks</li>' +
+      ORDER.map(function (k) { return '<li>' + glyph(k) + STATUS[k].label + '</li>'; }).join('') + '</ul></footer>';
+  }
+
+  function toolbar(showJeffTab) {
+    var tabs = [['all', 'All'], ['open', 'Open']];
+    if (showJeffTab) tabs.push(['jeff', 'With Jeff']);
+    tabs.push(['done', 'Done']);
+    return '<div class="toolbar"><div class="tabs" role="group" aria-label="Filter">' +
+      tabs.map(function (t) { return '<button type="button" data-filter="' + t[0] + '" aria-pressed="' + (ui.filter === t[0]) + '">' + t[1] + '</button>'; }).join('') +
+      '</div><label class="sortlbl">Order <span class="seg" role="group" aria-label="Order">' +
+      '<button type="button" data-sort="number" aria-pressed="' + (ui.sort === 'number') + '">By number</button>' +
+      '<button type="button" data-sort="open" aria-pressed="' + (ui.sort === 'open') + '">Open first</button></span></label></div>';
+  }
+
+  /* ---------- login ---------- */
+  function renderLogin() {
+    var sent = ui.sent;
+    return '<div class="login"><div class="login-sheet"><h1>Workpaper</h1>' +
+      '<p class="sub">The shared checklist for your bookkeeper’s document request.</p><div class="rule"></div>' +
+      '<form id="loginForm"><label for="email">Email</label>' +
+      '<input id="email" type="email" autocomplete="email" placeholder="you@example.com" required value="' + esc(ui.email || '') + '">' +
+      '<button class="btn primary" type="submit">Email me a sign-in link</button></form>' +
+      (remote && sent ? '<p class="ok" role="status" style="margin:16px 0 0;color:var(--blue);font-weight:500">Check your email for the sign-in link. It works for one sign-in.</p>' : '') +
+      (ui.authError ? '<p class="err" role="alert" style="margin:16px 0 0;color:var(--red);font-weight:500">' + esc(ui.authError) + '</p>' : '') +
+      (!remote && sent ? '<div class="proto"><p>Prototype only: no email is sent. Continue as:</p><div class="btns">' +
+        '<button class="btn" data-signin="client">Client (full checklist)</button>' +
+        '<button class="btn" data-signin="jeff">Jeff (his items only)</button>' +
+        '<button class="btn" data-signin="bookkeeper">Bookkeeper (read-only)</button></div></div>' : '') +
+      '</div></div>';
+  }
+
+  /* ---------- client ---------- */
+  function importPanel() {
+    var pd = ui.pending;
+    var h = '<section class="import" aria-labelledby="impH"><h2 id="impH">Import the bookkeeper’s request</h2>' +
+      '<p>Choose the spreadsheet they emailed (Excel or CSV), or paste its rows. Rows you have already seen keep their status and notes, so only new rows need your attention.</p>' +
+      '<label class="sr" for="csvText">Spreadsheet rows</label>' +
+      '<textarea id="csvText" placeholder="Paste rows here, including the header row"></textarea>' +
+      '<div class="acts"><label class="btn primary" style="display:inline-flex;align-items:center;cursor:pointer">Choose Excel or CSV file<input id="csvFile" type="file" accept=".xlsx,.xls,.csv,text/csv" class="sr"></label>' +
+      '<button class="btn" type="button" data-act="checkpaste">Check pasted rows</button>' +
+      '<button class="btn" type="button" data-act="closeimport">Cancel</button>' +
+      (ui.importMsg ? '<span class="' + ui.importMsg.kind + '" role="status">' + esc(ui.importMsg.text) + '</span>' : '') + '</div>';
+    if (pd) {
+      var st = pd.stats;
+      h += '<div class="review" role="region" aria-label="Import review"><h3>' + st.total + ' rows read</h3><ul>' +
+        '<li>' + glyph('hubdoc') + '<span><b>' + st.carried + '</b> already tracked. Status and notes carry over.</span></li>' +
+        '<li>' + glyph('waiting') + '<span><b>' + st.fresh + '</b> new. These start as waiting on you.</span></li>' +
+        (st.twins ? '<li>' + glyph('missing') + '<span><b>' + st.twins + '</b> ' + (st.twins === 1 ? 'row repeats' : 'rows repeat') + ' an earlier row exactly (same date, amount, description and account). Kept as separate items.</span></li>' : '') +
+        (st.dropped ? '<li>' + glyph('explained') + '<span><b>' + st.dropped + '</b> ' + (st.dropped === 1 ? 'item from the current request is' : 'items from the current request are') + ' not in this sheet. Kept in history.</span></li>' : '') +
+        '</ul>';
+      if (!st.fresh && !st.dropped) {
+        h += '<p class="ok" style="margin:0 0 10px">Nothing new: this sheet matches the current request, so nothing was added.</p><button class="btn" type="button" data-act="discardpending">Discard</button>';
+      } else {
+        h += '<label for="reqName">Name this request</label><input id="reqName" type="text" value="' + esc(pd.name) + '">' +
+          '<div class="acts" style="margin-top:0"><button class="btn primary" type="button" data-act="confirmimport">Add as new request</button><button class="btn" type="button" data-act="discardpending">Discard</button></div>';
+      }
+      h += '</div>';
+    }
+    return h + '</section>';
+  }
+
+  function tickCell(item, editable) {
+    if (!editable) return '<div class="tick-cell" title="' + esc(STATUS[item.status].label) + '">' + glyph(item.status, ui.drawId === item.id) + '<span class="sr">' + esc(STATUS[item.status].label) + '</span></div>';
+    var open = ui.menuFor === item.id;
+    var h = '<div class="tick-cell"><button type="button" class="tickbtn" data-menu="' + item.id + '" aria-haspopup="menu" aria-expanded="' + open + '" aria-label="Item ' + item.no + ' status: ' + esc(STATUS[item.status].label) + '">' + glyph(item.status, ui.drawId === item.id) + '</button>';
+    if (open) {
+      h += '<div class="menu" role="menu" aria-label="Set status">' + ORDER.map(function (k) {
+        return '<button type="button" role="menuitemradio" aria-checked="' + (item.status === k) + '" data-set="' + item.id + ':' + k + '">' + glyph(k) + STATUS[k].label + '</button>';
+      }).join('') + '</div>';
+    }
+    return h + '</div>';
+  }
+
+  function rowHTML(item, mode) {
+    var done = !STATUS[item.status].open && item.status !== 'missing';
+    var cls = 'row' + (done ? ' done' : '') + (item.status === 'missing' ? ' flag' : '') + (mode === 'bk' ? ' bk' : '');
+    var meta = esc(item.date) + (item.amount ? ' · <span class="num">' + money(item.amount) + '</span>' : '') + (item.source ? ' · ' + esc(item.source) : '');
+    var owner;
+    if (mode === 'client') {
+      owner = '<div class="owner"><label class="sr" for="o' + item.id + '">Owner of item ' + item.no + '</label><select id="o' + item.id + '" data-owner="' + item.id + '"><option value="me"' + (item.owner === 'me' ? ' selected' : '') + '>Me</option><option value="jeff"' + (item.owner === 'jeff' ? ' selected' : '') + '>Jeff</option></select></div>';
+    } else {
+      owner = '<span class="ownertxt">' + (item.owner === 'jeff' ? 'Jeff' : 'Client') + '</span>';
+    }
+    var note;
+    if (mode === 'client') {
+      note = '<div class="notec"><label class="sr" for="n' + item.id + '">Note for item ' + item.no + '</label><input class="note-in" id="n' + item.id + '" data-note="' + item.id + '" value="' + esc(item.note) + '" placeholder="Add a note"></div>';
+    } else {
+      note = '<div class="notec note">' + esc(item.note) + '</div>';
+    }
+    return '<div class="' + cls + '"><div class="no num">' + item.no + '</div>' +
+      '<div class="descc"><span class="desc">' + esc(item.desc) + '</span><span class="meta">' + meta + '</span></div>' +
+      owner + tickCell(item, mode === 'client') + note + '</div>';
+  }
+
+  function ledger(items, mode) {
+    if (!items.length) return '<p class="empty" style="padding:32px 0;color:var(--ink-soft)">Nothing matches this filter.</p>';
+    var groups = [], last;
+    items.forEach(function (it) {
+      var k = monthKey(it);
+      if (!last || last.key !== k) { last = { key: k, items: [] }; groups.push(last); }
+      last.items.push(it);
+    });
+    var headRow = '<div class="row head' + (mode === 'bk' ? ' bk' : '') + '" aria-hidden="true"><div>No.</div><div>Item</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
+    return '<div class="ledger">' + groups.map(function (g) {
+      var open = g.items.filter(function (i) { return i.status === 'waiting' || i.status === 'jeff'; }).length;
+      var flag = g.items.filter(function (i) { return i.status === 'missing'; }).length;
+      var done = g.items.length - open - flag;
+      var count = '<span class="mcount">' +
+        '<span>' + glyph('waiting') + open + ' open</span>' +
+        (flag ? '<span>' + glyph('missing') + flag + ' can’t find</span>' : '') +
+        '<span>' + glyph('hubdoc') + done + ' done</span></span>';
+      return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead"><h2>' + esc(monthLabel(g.key)) + '</h2>' + count + '</div>' + headRow +
+        g.items.map(function (i) { return rowHTML(i, mode); }).join('') + '</section>';
+    }).join('') + '</div>';
+  }
+
+  function histBar() {
+    if (!state.history.length) return '';
+    var opts = '<option value=""' + (!ui.viewId ? ' selected' : '') + '>Current: ' + esc(state.cycle) + '</option>' +
+      state.history.map(function (h) { return '<option value="' + h.id + '"' + (ui.viewId === h.id ? ' selected' : '') + '>' + esc(h.name) + '</option>'; }).join('');
+    return '<div class="histbar"><label for="histSel">Request</label><select id="histSel">' + opts + '</select></div>';
+  }
+  function pastBar() {
+    var p = pastView();
+    return p ? '<div class="pastbar"><span>Past request, read-only. Imported ' + esc(p.importedAt || '') + '.</span><button type="button" class="btn small" data-act="backcurrent">Back to current request</button></div>' : '';
+  }
+
+  function renderClient() {
+    var past = pastView();
+    var items = viewItems();
+    var hasItems = items.length > 0;
+    var head = '<div class="sheet-head"><div><h1>' + esc(viewName()) + '</h1><p>From ' + esc(state.from) + (state.sample && !past ? '. Sample data, replace it with an import.' : '.') + '</p></div>' +
+      '<div style="display:grid;gap:10px;justify-items:end">' + '<button type="button" class="btn primary" data-act="openimport">Import request</button>' + histBar() + '</div></div>';
+    var body;
+    if (!hasItems) {
+      body = '<div class="empty"><h2>No request yet</h2><p>Import the spreadsheet your bookkeeper emailed. Each row becomes an item you can tick off, note, or pass to Jeff.</p><button type="button" class="btn primary" data-act="openimport">Import request</button></div>';
+    } else {
+      body = pastBar() + tally() + toolbar(!past) + ledger(sorted(filtered(items)), past ? 'bk' : 'client');
+    }
+    return strip() + '<main id="main">' + head + (ui.importOpen ? importPanel() : '') + body + '</main>' + (hasItems ? legend() : '');
+  }
+
+  /* ---------- bookkeeper ---------- */
+  function renderBookkeeper() {
+    var past = pastView();
+    var head = '<div class="sheet-head"><div><h1>' + esc(viewName()) + '</h1><p>Read-only view of the client’s progress. It updates as they work.</p></div>' + histBar() + '</div>';
+    if (!viewItems().length) return strip() + '<main id="main">' + head + '<div class="empty"><h2>Nothing to show yet</h2><p>The client has not imported this request.</p></div></main>';
+    return strip() + '<main id="main">' + head + pastBar() + tally() + toolbar(false) + ledger(sorted(filtered(viewItems())), 'bk') + '</main>' + legend();
+  }
+
+  /* ---------- jeff ---------- */
+  function renderJeff() {
+    var mine = state.items.filter(function (i) { return i.owner === 'jeff'; });
+    var waiting = mine.filter(function (i) { return i.status === 'jeff'; }).length;
+    var head = '<div class="sheet-head"><div><h1>Your list</h1><p>' + (mine.length ? (waiting ? waiting + ' of ' + mine.length + ' items still need you.' : 'All ' + mine.length + ' items are dealt with. Thank you.') : 'Nothing has been passed to you yet.') + '</p></div></div>';
+    var body;
+    if (!mine.length) {
+      body = '<div class="empty"><h2>Nothing for you yet</h2><p>When the client passes purchases to you, they will show up here.</p></div>';
+    } else {
+      body = '<div role="list">' + mine.sort(function (a, b) { return (a.status === 'jeff' ? 0 : 1) - (b.status === 'jeff' ? 0 : 1) || a.no - b.no; }).map(function (i) {
+        function b(k, txt) {
+          return '<button type="button" data-jset="' + i.id + ':' + k + '" aria-pressed="' + (i.status === k) + '">' + glyph(k) + txt + '</button>';
+        }
+        return '<div class="jrow" role="listitem"><div class="top">' + glyph(i.status, ui.drawId === i.id) + '<div><div class="jdesc">' + esc(i.desc) + '</div><div class="meta">Item ' + i.no + ' · ' + esc(i.date) + (i.amount ? ' · <span class="num">' + money(i.amount) + '</span>' : '') + ' · ' + esc(STATUS[i.status].label) + '</div></div></div>' +
+          '<div class="jacts">' + b('hubdoc', 'Uploaded') + b('missing', 'Can’t find') + b('explained', 'Explain') + '</div>' +
+          '<div><label class="sr" for="jn' + i.id + '">Note for item ' + i.no + '</label><input class="note-in" id="jn' + i.id + '" data-note="' + i.id + '" value="' + esc(i.note) + '" placeholder="Add a note, e.g. what this was for"></div></div>';
+      }).join('') + '</div>';
+    }
+    return strip() + '<main id="main">' + head + body + '</main>' + legend();
+  }
+
+  /* ---------- render ---------- */
+  var app = document.getElementById('app');
+  function render(focusSel) {
+    var scroll = window.scrollY;
+    if (ui.loading) app.innerHTML = '<div class="login"><div class="login-sheet"><h1>Workpaper</h1><p class="sub">Loading\u2026</p></div></div>';
+    else if (!state.user) app.innerHTML = renderLogin();
+    else if (state.role === 'jeff') app.innerHTML = renderJeff();
+    else if (state.role === 'bookkeeper') app.innerHTML = renderBookkeeper();
+    else app.innerHTML = renderClient();
+    ui.drawId = null;
+    window.scrollTo(0, scroll);
+    if (focusSel) { var el = app.querySelector(focusSel); if (el) el.focus(); }
+  }
+
+  /* ---------- csv ---------- */
+  function parseCSV(text) {
+    var rows = [], row = [], cur = '', q = false, i, ch;
+    var delim = text.indexOf('\t') > -1 && text.indexOf(',') === -1 ? '\t' : ',';
+    for (i = 0; i < text.length; i++) {
+      ch = text[i];
+      if (q) {
+        if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === delim) { row.push(cur); cur = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += ch;
+    }
+    if (cur.length || row.length) { row.push(cur); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (c) { return c.trim(); }); });
+  }
+
+  var DESC_KEYS = ['memo/description', 'description', 'memo', 'item', 'details', 'vendor', 'payee'];
+  function serialToDate(n) {
+    var d = new Date(Math.round((n - 25569) * 86400000));
+    return ('0' + (d.getUTCMonth() + 1)).slice(-2) + '/' + ('0' + d.getUTCDate()).slice(-2) + '/' + d.getUTCFullYear();
+  }
+  function cellText(v) { return typeof v === 'number' ? String(v) : String(v == null ? '' : v).trim(); }
+
+  // Finds the header row anywhere in the first 30 rows (accounting exports put a title block above it),
+  // skips TOTAL and timestamp rows below the data.
+  function readTable(rows) {
+    var h = -1, i;
+    for (i = 0; i < Math.min(rows.length, 30); i++) {
+      var low = rows[i].map(function (c) { return cellText(c).toLowerCase(); });
+      if (low.indexOf('date') > -1 && DESC_KEYS.concat(['name']).some(function (k) { return low.indexOf(k) > -1; })) { h = i; break; }
+    }
+    if (h < 0) return { error: 'Could not find a header row with a Date column and a description column.' };
+    var head = rows[h].map(function (c) { return cellText(c).toLowerCase(); });
+    function find(names) { for (var n = 0; n < names.length; n++) { var ix = head.indexOf(names[n]); if (ix > -1) return ix; } return -1; }
+    var iDate = find(['date', 'transaction date']), iMemo = find(DESC_KEYS), iName = find(['name']);
+    var iAmt = find(['amount', 'total', 'debit']), iSrc = find(['split', 'account', 'card', 'paid from']), iNote = find(['note', 'notes', 'comment', 'comments']);
+    var items = [];
+    rows.slice(h + 1).forEach(function (r) {
+      var first = cellText(r[0]).toLowerCase();
+      if (first === 'total' || first.indexOf('total') === 0) return;
+      var name = iName > -1 ? cellText(r[iName]) : '';
+      var memo = iMemo > -1 ? cellText(r[iMemo]).replace(/View more\s*/g, '').trim() : '';
+      var dateRaw = iDate > -1 ? r[iDate] : '';
+      var date = typeof dateRaw === 'number' ? serialToDate(dateRaw) : cellText(dateRaw);
+      var amtRaw = iAmt > -1 ? cellText(r[iAmt]).replace(/[$,]/g, '') : '';
+      var amt = amtRaw !== '' && !isNaN(parseFloat(amtRaw)) ? parseFloat(amtRaw).toFixed(2) : amtRaw;
+      if (!(name || memo) || !(date || amt)) return;
+      var src = iSrc > -1 ? cellText(r[iSrc]).replace(/^\d{3,5}\s+/, '') : '';
+      items.push({ date: date, amount: amt, desc: name || memo, memo: name ? memo : '', source: src, note: iNote > -1 ? cellText(r[iNote]) : '' });
+    });
+    if (!items.length) return { error: 'Found the header row but no transactions under it.' };
+    var title = h > 0 ? [cellText(rows[0][0]), cellText(rows[Math.min(2, h - 1)][0])].filter(Boolean).join(', ') : '';
+    return { items: items, title: title };
+  }
+
+  // Compares the sheet against the current request and every past one, carrying over what is already known.
+  function planImport(table) {
+    var known = {};
+    state.history.slice().reverse().forEach(function (hs) { hs.items.forEach(function (it) { known[it.fp] = it; }); });
+    state.items.forEach(function (it) { known[it.fp] = it; });
+    stampFingerprints(table.items);
+    var carried = 0, fresh = 0, twins = 0, seenFp = {};
+    var stamp = Date.now();
+    var items = table.items.map(function (it, n) {
+      var old = known[it.fp];
+      var out = { id: 'i' + stamp + '_' + n, no: n + 1, date: it.date, desc: it.desc, memo: it.memo, amount: it.amount, source: it.source, fp: it.fp,
+        owner: old ? old.owner : 'me', status: old ? old.status : 'waiting', note: old ? old.note : it.note, isNew: !old && (state.items.length > 0) };
+      if (old) carried++; else fresh++;
+      if (/#[1-9]\d*$/.test(it.fp)) twins++;
+      seenFp[it.fp] = 1;
+      return out;
+    });
+    var dropped = state.items.filter(function (it) { return !seenFp[it.fp]; }).length;
+    var today = new Date().toISOString().slice(0, 10);
+    return { name: table.title || ('Request ' + today), items: items, stats: { total: items.length, carried: carried, fresh: fresh, twins: twins, dropped: dropped } };
+  }
+
+  function stageRows(rows) {
+    var t = readTable(rows);
+    if (t.error) { ui.pending = null; ui.importMsg = { kind: 'err', text: t.error }; }
+    else { ui.pending = planImport(t); ui.importMsg = null; }
+    render(ui.pending ? '#reqName, [data-act="discardpending"]' : '#csvText');
+  }
+
+  /* ---------- remote data (Supabase) ---------- */
+  function dbItem(r) {
+    return { id: r.id, no: r.no, date: r.item_date, desc: r.description, memo: r.memo, amount: r.amount, source: r.source, fp: r.fingerprint,
+      owner: r.owner, status: r.status, note: r.note, isNew: r.is_new, requestId: r.request_id };
+  }
+  function fail(err, what) { ui.error = what + (err && err.message ? ' (' + err.message + ')' : ''); render(); }
+
+  async function loadRemote() {
+    var reqs = await remote.from('requests').select('*').order('imported_at', { ascending: false });
+    if (reqs.error) return fail(reqs.error, 'Could not load requests.');
+    var its = await remote.from('items').select('*').order('no');
+    if (its.error) return fail(its.error, 'Could not load items.');
+    var by = {};
+    its.data.forEach(function (r) { (by[r.request_id] = by[r.request_id] || []).push(dbItem(r)); });
+    var list = reqs.data.map(function (r) { return { id: r.id, name: r.name, importedAt: String(r.imported_at).slice(0, 10), items: by[r.id] || [] }; });
+    var cur = list[0];
+    state.items = cur ? cur.items : [];
+    state.cycle = cur ? cur.name : '';
+    state.currentId = cur ? cur.id : null;
+    state.history = list.slice(1);
+    if (ui.viewId && !state.history.some(function (h) { return h.id === ui.viewId; })) ui.viewId = null;
+    ui.loading = false;
+    render();
+  }
+
+  var reloadTimer = null;
+  function scheduleReload() { clearTimeout(reloadTimer); reloadTimer = setTimeout(loadRemote, 400); }
+
+  async function enterSession(session) {
+    if (!session) { state.user = null; state.role = null; ui.loading = false; render(); return; }
+    var m = await remote.from('members').select('role').eq('user_id', session.user.id).maybeSingle();
+    if (m.error || !m.data) {
+      await remote.auth.signOut();
+      state.user = null; state.role = null; ui.loading = false;
+      ui.authError = 'This email is not set up for Workpaper yet. Ask the account owner to add you.';
+      render(); return;
+    }
+    state.user = session.user.email; state.role = m.data.role; ui.authError = '';
+    ui.sort = state.role === 'bookkeeper' ? 'open' : 'number';
+    await loadRemote();
+    remote.channel('items-live').on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, scheduleReload).subscribe();
+  }
+
+  function pushItem(it, fields) {
+    if (!remote) return;
+    remote.from('items').update(fields).eq('id', it.id).then(function (r) { if (r.error) { fail(r.error, 'Your change was not saved.'); scheduleReload(); } });
+  }
+
+  async function pushImport(plan, name) {
+    var r = await remote.from('requests').insert({ name: name }).select().single();
+    if (r.error) return fail(r.error, 'Could not create the request.');
+    var rows = plan.items.map(function (it) {
+      return { request_id: r.data.id, no: it.no, item_date: it.date, description: it.desc, memo: it.memo || '', amount: it.amount || '', source: it.source || '',
+        fingerprint: it.fp, owner: it.owner, status: it.status, note: it.note || '', is_new: !!it.isNew };
+    });
+    var ins = await remote.from('items').insert(rows);
+    if (ins.error) { await remote.from('requests').delete().eq('id', r.data.id); return fail(ins.error, 'Could not save the imported items.'); }
+    await loadRemote();
+  }
+
+  /* ---------- actions ---------- */
+  function setStatus(id, key, byJeff) {
+    var it = state.items.find(function (x) { return x.id === id; });
+    if (!it || !STATUS[key]) return;
+    it.status = key;
+    if (!byJeff) {
+      if (key === 'jeff') it.owner = 'jeff';
+    }
+    ui.drawId = id; ui.menuFor = null;
+    save();
+    pushItem(it, byJeff ? { status: key } : { status: key, owner: it.owner });
+  }
+
+  app.addEventListener('click', function (e) {
+    var t = e.target.closest('button, [data-act]');
+    if (!t) { if (ui.menuFor) { ui.menuFor = null; render(); } return; }
+    var d = t.dataset;
+    if (d.signin) { state.user = ROLE_EMAIL[d.signin]; state.role = d.signin; save(); render('#main'); return; }
+    if (d.role) { state.role = d.role; state.user = ROLE_EMAIL[d.role]; ui.menuFor = null; ui.filter = 'all'; ui.sort = d.role === 'bookkeeper' ? 'open' : 'number'; save(); render(); return; }
+    if (d.act === 'dismisserr') { ui.error = ''; render(); return; }
+    if (d.act === 'signout' && remote) { remote.auth.signOut().then(function () { state.user = null; state.role = null; ui.sent = false; render(); }); return; }
+    if (d.act === 'signout') { state.user = null; state.role = null; ui.sent = false; save(); render(); return; }
+    if (d.act === 'openimport') { ui.importOpen = true; ui.importMsg = null; ui.pending = null; ui.viewId = null; render('#csvText'); return; }
+    if (d.act === 'closeimport') { ui.importOpen = false; ui.pending = null; ui.importMsg = null; render(); return; }
+    if (d.act === 'checkpaste') {
+      var txt = (document.getElementById('csvText') || {}).value || '';
+      if (!txt.trim()) { ui.importMsg = { kind: 'err', text: 'Paste the spreadsheet rows first, or choose a file.' }; render('#csvText'); return; }
+      stageRows(parseCSV(txt)); return;
+    }
+    if (d.act === 'discardpending') { ui.pending = null; ui.importMsg = null; render('#csvText'); return; }
+    if (d.act === 'backcurrent') { ui.viewId = null; render(); return; }
+    if (d.act === 'confirmimport') {
+      var nm = ((document.getElementById('reqName') || {}).value || '').trim() || ui.pending.name;
+      if (remote) { var plan = ui.pending; ui.pending = null; ui.importOpen = false; ui.importMsg = null; ui.filter = 'all'; ui.viewId = null; pushImport(plan, nm); return; }
+      if (state.items.length) state.history.unshift({ id: 'h' + Date.now(), name: state.cycle, importedAt: state.importedAt || new Date().toISOString().slice(0, 10), items: state.items });
+      state.items = ui.pending.items; state.cycle = nm; state.sample = false; state.importedAt = new Date().toISOString().slice(0, 10);
+      ui.pending = null; ui.importOpen = false; ui.importMsg = null; ui.filter = 'all'; ui.viewId = null; save(); render('#main'); return;
+    }
+    if (d.filter) { ui.filter = d.filter; render(); return; }
+    if (d.sort) { ui.sort = d.sort; render(); return; }
+    if (d.menu) { ui.menuFor = ui.menuFor === d.menu ? null : d.menu; render(ui.menuFor ? '.menu button[aria-checked="true"], .menu button' : '[data-menu="' + d.menu + '"]'); return; }
+    if (d.set) { var p = d.set.split(':'); setStatus(p[0], p[1], false); render('[data-menu="' + p[0] + '"]'); return; }
+    if (d.jset) {
+      var q = d.jset.split(':'); setStatus(q[0], q[1], true);
+      render(q[1] === 'explained' ? '#jn' + q[0] : '[data-jset="' + d.jset + '"]');
+      return;
+    }
+    if (ui.menuFor) { ui.menuFor = null; render(); }
+  });
+
+  app.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.dataset.owner) {
+      var it = state.items.find(function (x) { return x.id === t.dataset.owner; });
+      it.owner = t.value;
+      if (t.value === 'jeff' && it.status === 'waiting') { it.status = 'jeff'; ui.drawId = it.id; }
+      if (t.value === 'me' && it.status === 'jeff') { it.status = 'waiting'; ui.drawId = it.id; }
+      save(); pushItem(it, { owner: it.owner, status: it.status }); render('#o' + it.id); return;
+    }
+    if (t.dataset.note) {
+      var n = state.items.find(function (x) { return x.id === t.dataset.note; });
+      n.note = t.value; save(); pushItem(n, { note: t.value }); return;
+    }
+    if (t.id === 'histSel') { ui.viewId = t.value || null; ui.filter = 'all'; render('#histSel'); return; }
+    if (t.id === 'csvFile' && t.files[0]) {
+      var f = t.files[0], fr = new FileReader();
+      if (/\.(xlsx|xls)$/i.test(f.name)) {
+        if (!window.XLSX) { ui.importMsg = { kind: 'err', text: 'Excel support did not load. Save the sheet as CSV and try again.' }; render(); return; }
+        fr.onload = function () {
+          try {
+            var wb = XLSX.read(new Uint8Array(fr.result), { type: 'array' });
+            stageRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' }));
+          } catch (err) { ui.importMsg = { kind: 'err', text: 'Could not read that Excel file.' }; render(); }
+        };
+        fr.readAsArrayBuffer(f);
+      } else {
+        fr.onload = function () { stageRows(parseCSV(String(fr.result))); };
+        fr.readAsText(f);
+      }
+    }
+  });
+
+  app.addEventListener('submit', function (e) {
+    if (e.target.id === 'loginForm') {
+      e.preventDefault();
+      ui.email = document.getElementById('email').value;
+      if (remote) {
+        ui.authError = '';
+        remote.auth.signInWithOtp({ email: ui.email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } }).then(function (r) {
+          if (r.error) { ui.authError = 'Could not send the link. Check the email address, or ask the account owner to add you.'; ui.sent = false; }
+          else ui.sent = true;
+          render('#email');
+        });
+        return;
+      }
+      ui.sent = true; render('[data-signin="client"]');
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && ui.menuFor) { var id = ui.menuFor; ui.menuFor = null; render('[data-menu="' + id + '"]'); }
+  });
+
+  if (remote) {
+    render();
+    remote.auth.getSession().then(function (r) { enterSession(r.data.session); });
+    remote.auth.onAuthStateChange(function (ev, session) { if (ev === 'SIGNED_OUT') { state.user = null; state.role = null; render(); } });
+  } else {
+    render();
+  }
+})();
+</script>
+</body>
+</html>
