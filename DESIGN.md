@@ -251,6 +251,9 @@ Slate Ink, docked above the legend, with the count and Clear on the first line. 
 ### Jeff's action buttons
 Two large outlined buttons (I have it, No document) with a mark above the label; a pressed state is a filled Slate Ink button.
 
+### Team screen
+An admin-only panel that opens at the top of the page, styled like the import panel: a plain ruled table of people (email, role, actions), then an "Add a person" form. Removing asks for a second click on the same row. Passwords are shown in plain text on purpose, so the admin can pass them on; destructive buttons use Pencil Red only for the confirm step.
+
 ### Inputs / Fields
 Field White fill, 1px slate outline, 3px corners, 44px minimum height on touch. Notes are borderless with a dashed underline and a Pencil Blue wash while focused.
 

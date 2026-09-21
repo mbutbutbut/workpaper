@@ -40,6 +40,18 @@ Someone with no row in `members` is signed out with a "not set up" message, even
 
 Deploy this folder as a static site (no build step). `.vercelignore` keeps the design notes out of the upload. Then set the Supabase Site URL (step 2.2) to the Vercel address.
 
+## 4b. Turn on the Team screen (managing people inside the app)
+
+Admins can add, edit and remove people from the app (top right: **Team**). This runs a small function on Vercel (`api/team.js`) that holds Supabase's secret key, so the key never reaches anyone's browser.
+
+1. In Supabase, open **Project Settings > API Keys** and copy the **secret key** (starts with `sb_secret_`). Keep it private.
+2. In Vercel, open your project, then **Settings > Environment Variables**, and add two variables (mark both **Sensitive**):
+   - `SUPABASE_URL` set to your project URL (the same value as `supabaseUrl` in `config.js`)
+   - `SUPABASE_SECRET_KEY` set to the secret key
+3. **Redeploy** (Deployments > the latest one > Redeploy), because new variables only apply to new deployments.
+
+Roles are shown as **Admin**, **Bookkeeper** and **Team member** (the database names are `client`, `bookkeeper` and `jeff`). Only an admin can use the Team screen, and the function checks that on every request. You cannot remove or change yourself, and there must always be one admin.
+
 ## 5. Check the rules
 
 Paste `supabase/role-check.sql` into the SQL editor and run it. It acts as each person in turn, using the same database rules the app uses, then shows a PASS/FAIL table. Every row must say PASS, and it deletes its own test data.
