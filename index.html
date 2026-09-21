@@ -568,16 +568,18 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   var useRemote = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
   var remote = null; // created after the database library loads, only when configured
   // Third-party code loads only when needed: the Excel reader on first import, the database library only when configured.
-  function loadScript(src) {
+  function loadScript(src, integrity) {
     return new Promise(function (resolve, reject) {
-      var el = document.createElement('script'); el.src = src; el.onload = resolve; el.onerror = function () { reject(new Error('Could not load ' + src)); };
+      var el = document.createElement('script'); el.src = src;
+      if (integrity) { el.integrity = integrity; el.crossOrigin = 'anonymous'; }
+      el.onload = resolve; el.onerror = function () { reject(new Error('Could not load ' + src)); };
       document.head.appendChild(el);
     });
   }
   var xlsxLoad = null;
   function ensureXLSX() {
     if (window.XLSX) return Promise.resolve();
-    xlsxLoad = xlsxLoad || loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js').catch(function (e) { xlsxLoad = null; throw e; });
+    xlsxLoad = xlsxLoad || loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw').catch(function (e) { xlsxLoad = null; throw e; });
     return xlsxLoad;
   }
   var state = useRemote ? { comments: {}, items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || (function () { var it = sample(); return { items: it, comments: sampleComments(it), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null }; })();
@@ -1325,12 +1327,29 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   }
   function fail(err, what) { ui.error = what + (err && err.message ? ' (' + err.message + ')' : ''); render(); }
 
+  // The database returns at most 1000 rows per request, so read in pages, or a long history would silently lose rows.
+  async function fetchAll(table, order) {
+    var out = [], from = 0, size = 1000;
+    for (;;) {
+      var r = await remote.from(table).select('*').order(order).order('id').range(from, from + size - 1);
+      if (r.error) return r;
+      out = out.concat(r.data);
+      if (r.data.length < size) return { data: out, error: null };
+      from += size;
+    }
+  }
+  var loadSeq = 0;
   async function loadRemote() {
-    var reqs = await remote.from('requests').select('*').order('imported_at', { ascending: false });
+    var mine = ++loadSeq;
+    var got = await Promise.all([
+      remote.from('requests').select('*').order('imported_at', { ascending: false }),
+      fetchAll('items', 'no'),
+      fetchAll('comments', 'created_at')
+    ]);
+    if (mine !== loadSeq) return; // a newer load is already on its way
+    var reqs = got[0], its = got[1], cm = got[2];
     if (reqs.error) return fail(reqs.error, 'Could not load requests.');
-    var its = await remote.from('items').select('*').order('no');
     if (its.error) return fail(its.error, 'Could not load items.');
-    var cm = await remote.from('comments').select('*').order('created_at');
     state.comments = {};
     if (!cm.error) cm.data.forEach(function (c) { (state.comments[c.fingerprint] = state.comments[c.fingerprint] || []).push({ id: c.id, role: c.role, kind: c.kind, body: c.body, at: c.created_at, author: c.author_id, edited: !!c.edited_at, removed: !!c.removed }); });
     var by = {};
@@ -1405,7 +1424,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       return { request_id: r.data.id, no: it.no, item_date: it.date, description: it.desc, memo: it.memo || '', amount: it.amount || '', source: it.source || '',
         fingerprint: it.fp, owner: it.owner, status: it.status, note: it.note || '', is_new: !!it.isNew, reviewed: !!it.reviewed, sent_back: !!it.sentBack };
     });
-    var ins = await remote.from('items').insert(rows);
+    var ins = { error: null };
+    for (var k = 0; k < rows.length && !ins.error; k += 500) ins = await remote.from('items').insert(rows.slice(k, k + 500));
     if (ins.error) { ui.importing = false; await remote.from('requests').delete().eq('id', r.data.id); return fail(ins.error, 'Could not save the imported items.'); }
     ui.importing = false;
     await loadRemote();
@@ -1742,7 +1762,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
   render();
   if (useRemote) {
-    loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2').then(function () {
+    loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js', 'sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP').then(function () {
       remote = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
       remote.auth.getSession().then(function (r) { enterSession(r.data.session); });
       remote.auth.onAuthStateChange(function (ev, session) { if (ev === 'SIGNED_OUT') { state.user = null; state.role = null; render(); } });
