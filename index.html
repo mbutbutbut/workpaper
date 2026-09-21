@@ -22,6 +22,12 @@
   --red: #b8322a;
   --red-wash: #f7e3df;
   --focus: #2557a7;
+  --field: #ffffff;
+  --ink-hover: #303c49;
+  --placeholder: #566270;
+  --red-on-ink: #ffd9d4;
+  --ink-rgb: 31, 41, 51;
+  --paper-rgb: 234, 241, 226;
   --font-ui: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-pencil: "Caveat", "Segoe Print", cursive;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -61,7 +67,7 @@ input, textarea, select { font: inherit; color: inherit; caret-color: var(--blue
 }
 .btn:hover { background: var(--paper-deep); }
 .btn.primary { background: var(--ink); color: var(--paper); }
-.btn.primary:hover { background: #303c49; }
+.btn.primary:hover { background: var(--ink-hover); }
 .btn.small { min-height: 34px; padding: 5px 12px; font-size: 14px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .link { background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 3px; color: var(--blue); font-weight: 500; }
@@ -117,7 +123,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .row.flag { background-color: var(--red-wash); margin: 0 -10px; padding-left: 10px; padding-right: 10px; }
 .note { font-family: var(--font-pencil); font-size: 21px; line-height: 1.15; color: var(--blue); padding-top: 2px; }
 .note-in { width: 100%; border: 1px solid transparent; border-bottom: 1px dashed var(--rule); background: transparent; padding: 3px 2px; font-family: var(--font-pencil); font-size: 21px; color: var(--blue); border-radius: 0; }
-.note-in::placeholder { color: #8c98a6; font-family: var(--font-ui); font-size: 14px; }
+.note-in::placeholder { color: var(--placeholder); font-family: var(--font-ui); font-size: 14px; }
 .note-in:hover { border-bottom-color: var(--ink-soft); }
 .note-in:focus { outline: none; border-bottom: 1px solid var(--blue); background: var(--blue-wash); }
 
@@ -133,7 +139,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .t-missing { color: var(--red); } .t-explained { color: var(--blue); }
 .tick.draw .g { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .45s var(--ease-out) forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
-.menu { position: absolute; z-index: 20; top: 38px; left: -8px; width: 232px; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 0 8px 20px -6px rgba(31,41,51,.28); padding: 4px; }
+.menu { position: absolute; z-index: 20; top: 38px; left: -8px; width: 232px; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 0 8px 20px -6px rgba(var(--ink-rgb), .28); padding: 4px; }
 .menu.up { top: auto; bottom: 38px; }
 .menu button { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 2px; min-height: 40px; }
 .menu button:hover, .menu button:focus-visible { background: var(--paper-deep); }
@@ -151,7 +157,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .import { border: 1.5px solid var(--ink); padding: 18px; margin: 8px 0 16px; background: var(--paper); border-radius: 3px; }
 .import h2 { margin: 0 0 4px; font-size: 1.15rem; }
 .import p { margin: 0 0 12px; color: var(--ink-soft); max-width: 66ch; }
-.import textarea { width: 100%; min-height: 130px; border: 1px solid var(--ink-soft); background: #fff; padding: 10px; border-radius: 3px; font-size: 14px; }
+.import textarea { width: 100%; min-height: 130px; border: 1px solid var(--ink-soft); background: var(--field); padding: 10px; border-radius: 3px; font-size: 14px; }
 .import .acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
 .import .err { color: var(--red); font-weight: 500; }
 .import .ok { color: var(--blue); font-weight: 500; }
@@ -168,7 +174,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .login-sheet .sub { color: var(--ink-soft); margin: 0 0 26px; }
 .login-sheet .rule { border-top: 3px double var(--rule-strong); border-bottom: 1px solid var(--rule-strong); height: 8px; margin-bottom: 26px; }
 .login-sheet label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
-.login-sheet input { width: 100%; border: 1px solid var(--ink); background: #fff; padding: 11px 12px; border-radius: 3px; min-height: 44px; margin-bottom: 14px; }
+.login-sheet input { width: 100%; border: 1px solid var(--ink); background: var(--field); padding: 11px 12px; border-radius: 3px; min-height: 44px; margin-bottom: 14px; }
 .login-sheet .btn { width: 100%; }
 .proto { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--rule); }
 .proto p { margin: 0 0 10px; font-size: 14px; color: var(--ink-soft); }
@@ -202,17 +208,17 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .mhead .mleft { display: inline-flex; align-items: center; gap: 10px; }
 .row.selected { background-color: var(--blue-wash); }
 .row.selected.flag { background-color: var(--red-wash); }
-.bulkbar { position: sticky; top: 0; z-index: 15; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; background: var(--ink); color: var(--paper); padding: 10px 14px; margin: 8px 0; border-radius: 3px; box-shadow: 0 8px 16px -10px rgba(31, 41, 51, .55); }
+.bulkbar { position: sticky; top: 0; z-index: 15; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; background: var(--ink); color: var(--paper); padding: 10px 14px; margin: 8px 0; border-radius: 3px; box-shadow: 0 8px 16px -10px rgba(var(--ink-rgb), .55); }
 .bulkbar .bcount { font-weight: 600; }
 .bulkbar .bacts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .bulkbar button { min-height: 40px; padding: 6px 14px; border: 1.5px solid var(--paper); background: transparent; color: var(--paper); border-radius: 3px; font-weight: 600; }
-.bulkbar button:hover { background: rgba(234, 241, 226, .16); }
+.bulkbar button:hover { background: rgba(var(--paper-rgb), .16); }
 .bulkbar button.plain { border-color: transparent; text-decoration: underline; text-underline-offset: 3px; }
 .bulkbar :focus-visible { outline-color: var(--paper); }
 .bulkbar .reasonbox { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1 1 320px; }
 .bulkbar .reasonbox label { font-weight: 600; }
-.bulkbar .reasonbox input { flex: 1 1 240px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--paper); border-radius: 3px; background: #fff; color: var(--ink); }
-.bulkbar .rerr { color: #ffd9d4; font-weight: 500; width: 100%; }
+.bulkbar .reasonbox input { flex: 1 1 240px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--paper); border-radius: 3px; background: var(--field); color: var(--ink); }
+.bulkbar .rerr { color: var(--red-on-ink); font-weight: 500; width: 100%; }
 .notice { margin: 8px 0; padding: 10px 14px; background: var(--blue-wash); border: 1px solid var(--blue); border-radius: 3px; font-weight: 500; }
 
 /* sortable headers */
@@ -230,7 +236,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .mhead { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; justify-content: space-between; padding: 8px 10px; background: var(--paper-deep); border-top: 3px double var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
 .mhead h2 { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
 .mhead .mcount { font-size: 14px; color: var(--ink-soft); font-weight: 500; display: inline-flex; gap: 14px; align-items: center; }
-.mhead .mcount span { display: inline-flex; gap: 6px; align-items: center; }
+.mhead .mcount { flex-wrap: wrap; gap: 2px 14px; }
+.mhead .mcount span { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
 .mhead .mcount svg { width: 16px; height: 16px; }
 .month .row.head { border-top: 0; }
 
@@ -242,9 +249,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .jlegend li { display: inline-flex; align-items: center; gap: 7px; }
 .jlegend .tick { width: 18px; height: 18px; }
 .jrow .jchange { justify-self: start; }
-.reason { border: 1.5px solid var(--ink); padding: 12px; border-radius: 3px; background: #fff; display: grid; gap: 8px; }
+.reason { border: 1.5px solid var(--ink); padding: 12px; border-radius: 3px; background: var(--field); display: grid; gap: 8px; }
 .reason label { font-weight: 600; }
-.reason input { width: 100%; border: 1px solid var(--ink-soft); padding: 10px; border-radius: 3px; min-height: 44px; background: #fff; }
+.reason input { width: 100%; border: 1px solid var(--ink-soft); padding: 10px; border-radius: 3px; min-height: 44px; background: var(--field); }
 .reason .acts { display: flex; gap: 8px; flex-wrap: wrap; }
 .reason .err { color: var(--red); font-weight: 500; }
 .warnlist li { align-items: flex-start; }
@@ -265,7 +272,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .mark { color: var(--ink-soft); }
 .mark.warn { color: var(--red); }
 .review label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; }
-.review input[type=text] { width: min(420px, 100%); border: 1px solid var(--ink); background: #fff; padding: 8px 10px; border-radius: 3px; min-height: 40px; margin-bottom: 12px; }
+.review input[type=text] { width: min(420px, 100%); border: 1px solid var(--ink); background: var(--field); padding: 8px 10px; border-radius: 3px; min-height: 40px; margin-bottom: 12px; }
 .new-badge { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); border: 1px solid var(--blue); padding: 0 6px; border-radius: 2px; vertical-align: 2px; }
 
 /* responsive */
@@ -345,6 +352,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   .legend .tick { width: 18px; height: 18px; }
   main { padding-bottom: 96px; }
 }
+@media (max-width: 360px) {
+  .legend { padding-inline: 8px; }
+  .legend ul { font-size: 10px; }
+  .legend .lshort { white-space: nowrap; }
+}
 </style>
 </head>
 <body>
@@ -357,11 +369,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
   /* ---------- glyphs: the tickmark legend ---------- */
   var STATUS = {
-    waiting:   { label: 'Waiting on me', short: 'Waiting',   cls: 't-waiting',   open: true,  path: '<circle class="g" cx="12" cy="12" r="7.5" pathLength="1" stroke-dasharray="0.07 0.055"/>' },
-    hubdoc:    { label: 'In Hubdoc',     short: 'In Hubdoc', cls: 't-hubdoc',    open: false, path: '<path class="g" d="M4 13.5 L9.5 19 L20.5 5" pathLength="1"/>' },
-    jeff:      { label: 'With Jeff',     short: 'With Jeff', cls: 't-jeff',      open: true,  path: '<path class="g" d="M4 12 H18 M12.5 6 L18.5 12 L12.5 18" pathLength="1"/>' },
-    missing:   { label: 'No document',    short: 'No document',cls: 't-missing',   open: true,  path: '<path class="g" d="M6 6 L18 18 M18 6 L6 18" pathLength="1"/>' },
-    explained: { label: 'Explained',     short: 'Explained', cls: 't-explained', open: false, path: '<path class="g" d="M5 9 H19 M5 15 H19" pathLength="1"/>' }
+    waiting:   { label: 'Waiting on me', cls: 't-waiting',   open: true,  path: '<circle class="g" cx="12" cy="12" r="7.5" pathLength="1" stroke-dasharray="0.07 0.055"/>' },
+    hubdoc:    { label: 'In Hubdoc',     cls: 't-hubdoc',    open: false, path: '<path class="g" d="M4 13.5 L9.5 19 L20.5 5" pathLength="1"/>' },
+    jeff:      { label: 'With Jeff',     cls: 't-jeff',      open: true,  path: '<path class="g" d="M4 12 H18 M12.5 6 L18.5 12 L12.5 18" pathLength="1"/>' },
+    missing:   { label: 'No document',    cls: 't-missing',   open: true,  path: '<path class="g" d="M6 6 L18 18 M18 6 L6 18" pathLength="1"/>' },
+    explained: { label: 'Explained',     cls: 't-explained', open: false, path: '<path class="g" d="M5 9 H19 M5 15 H19" pathLength="1"/>' }
   };
   var ORDER = ['waiting', 'hubdoc', 'jeff', 'missing', 'explained'];
 
