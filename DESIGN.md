@@ -44,6 +44,37 @@ typography:
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "0.08em"
+  small:
+    fontFamily: "Public Sans, system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 500
+    lineHeight: 1.3
+  legend-phone:
+    fontFamily: "Public Sans, system-ui, sans-serif"
+    fontSize: "11px"
+    fontWeight: 400
+    lineHeight: 1.2
+  legend-narrow:
+    fontFamily: "Public Sans, system-ui, sans-serif"
+    fontSize: "10px"
+    fontWeight: 400
+    lineHeight: 1.2
+  item-title:
+    fontFamily: "Public Sans, system-ui, sans-serif"
+    fontSize: "1.05rem"
+    fontWeight: 600
+    lineHeight: 1.3
+  heading:
+    fontFamily: "Public Sans, system-ui, sans-serif"
+    fontSize: "1.4rem"
+    fontWeight: 700
+    lineHeight: 1.2
+  login-title:
+    fontFamily: "Public Sans, system-ui, sans-serif"
+    fontSize: "2.2rem"
+    fontWeight: 700
+    lineHeight: 1.05
+    letterSpacing: "-0.02em"
   pencil-note:
     fontFamily: "Caveat, Segoe Print, cursive"
     fontSize: "21px"
@@ -149,7 +180,12 @@ A restrained, near-monochrome palette: paper and slate ink carry the page, and t
 - **Display** (700, clamp(1.6rem, 3vw + 0.5rem, 2.4rem), 1.1, -0.02em): the page title ("March request", "Your list").
 - **Title** (700, 1.15rem, 1.2): month names in the month band.
 - **Body** (400 and 500, 16px, 1.45): item descriptions and general text. Keep measure under about 66ch in prose.
+- **Item title** (600, 1.05rem, 1.3): the description on each of Jeff's cards.
+- **Heading** (700, 1.4rem, 1.2): the title of an empty or error state ("No request yet").
+- **Login title** (700, 2.2rem, 1.05, -0.02em): the app name on the sign-in page only.
 - **Meta** (400, 14px): dates, amounts, accounts and helper lines. Numbers use tabular figures so columns align.
+- **Small** (500, 13px, 1.3): the top strip, the legend on desktop and the pinned-legend labels.
+- **Phone legend** (11px) and **narrow legend** (10px, under 360px wide): the five short legend labels; nothing else uses these sizes.
 - **Label** (700, 12px, 0.08em tracking, uppercase): column headings only.
 - **Pencil note** (Caveat 500, 21px, 1.15): notes and reasons, always in Pencil Blue.
 
