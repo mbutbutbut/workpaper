@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Delegated: the user left the choice to Claude. User login is required, so a backend with authentication and a database is needed; a static-only front end is no longer enough. The specific stack is still to be chosen and recorded here when decided.
+A static single-page front end (`index.html`) hosted on Vercel, with Supabase for sign-in (emailed one-time links, no open signups) and Postgres data, and role rules enforced in the database (`supabase/schema.sql`). With `config.js` empty the app runs as a local prototype with sample data.
 
 ## Users
 
