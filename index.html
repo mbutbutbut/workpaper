@@ -192,11 +192,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .jacts button .tick { width: 22px; height: 22px; }
 .jacts button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .jacts button[aria-pressed="true"] .tick { color: var(--paper); }
-.jrow .note-in { min-height: 40px; }
+.jrow .note-in { min-height: 44px; }
 
 /* selection + bulk actions */
 .row.cl { grid-template-columns: 30px 40px minmax(0, 1.9fr) 92px 96px minmax(0, 1.1fr) 92px 52px minmax(0, 1.7fr); }
-.skip { position: absolute; left: 8px; top: -80px; z-index: 60; background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 3px; font-weight: 600; text-decoration: none; }
+.skip { position: absolute; left: 8px; top: -80px; z-index: 60; min-height: 44px; display: inline-flex; align-items: center; background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 3px; font-weight: 600; text-decoration: none; }
 .skip:focus { top: 8px; }
 [tabindex="-1"]:focus { outline: none; }
 .sel { display: grid; place-items: start center; padding: 10px 0 6px; margin: -8px 0 -4px; cursor: pointer; }
@@ -208,7 +208,10 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .mhead .mleft { display: inline-flex; align-items: center; gap: 10px; }
 .row.selected { background-color: var(--blue-wash); }
 .row.selected.flag { background-color: var(--red-wash); }
-.bulkbar { position: sticky; top: 0; z-index: 15; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; background: var(--ink); color: var(--paper); padding: 10px 14px; margin: 8px 0; border-radius: 3px; box-shadow: 0 8px 16px -10px rgba(var(--ink-rgb), .55); }
+.bulkbar { position: fixed; left: var(--pad); right: var(--pad); max-width: calc(1320px - 2 * var(--pad)); margin: 0 auto; bottom: calc(var(--legend-h, 46px) + 8px); z-index: 15; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 3px; box-shadow: 0 -8px 16px -10px rgba(var(--ink-rgb), .55); }
+.has-bulk main { padding-bottom: 220px; }
+.bulkbar button.primary { background: var(--paper); color: var(--ink); }
+.bulkbar button.primary:hover { background: #ffffff; }
 .bulkbar .bcount { font-weight: 600; }
 .bulkbar .bacts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .bulkbar button { min-height: 40px; padding: 6px 14px; border: 1.5px solid var(--paper); background: transparent; color: var(--paper); border-radius: 3px; font-weight: 600; }
@@ -255,6 +258,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .reason .acts { display: flex; gap: 8px; flex-wrap: wrap; }
 .reason .err { color: var(--red); font-weight: 500; }
 .warnlist li { align-items: flex-start; }
+.rnote { margin: 0 0 10px; color: var(--ink-soft); max-width: 66ch; }
 .preview { width: 100%; border-collapse: collapse; font-size: 14px; margin: 0 0 12px; }
 .preview th { text-align: left; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); padding: 6px 8px 6px 0; border-bottom: 1px solid var(--rule-strong); }
 .preview td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--rule); }
@@ -284,8 +288,10 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   .mhead.cl .mleft { padding-left: 0; }
   .bulkbar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 10px; }
   .bulkbar .bacts { display: contents; }
-  .bulkbar .bcount { grid-column: 1 / 3; grid-row: 1; align-self: center; }
-  .bulkbar button.plain { grid-column: 3; grid-row: 1; justify-self: end; min-height: 32px; padding: 2px 4px; }
+  .bulkbar .bcount { grid-column: 1; grid-row: 1; align-self: center; }
+  .bulkbar button.primary { grid-column: 3; grid-row: 1; }
+  .bulkbar button[data-bulk=clear] { grid-column: 2; grid-row: 1; justify-self: end; }
+  .bulkbar button.plain { min-height: 44px; padding: 2px 8px; }
   .bulkbar button { font-size: 14px; padding: 4px 8px; line-height: 1.2; }
   .bulkbar .reasonbox { grid-column: 1 / -1; }
   .row.cl { grid-template-columns: 28px 28px minmax(0, 1fr) 44px; }
@@ -322,6 +328,20 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .jrow > .jno { grid-column: 1; grid-row: 1; color: var(--ink-soft); font-size: 14px; padding-top: 3px; }
 .jrow > :not(.jno) { grid-column: 2; }
 
+/* filters & sort: inline on desktop, one disclosure on phones */
+.fs-toggle { display: none; }
+.fs-panel { display: contents; }
+.reqsel { display: none; }
+@media (max-width: 760px) {
+  .histbar { display: none; }
+  .fs-toggle { display: inline-flex; align-items: center; }
+  .fs-panel { display: none; width: 100%; gap: 10px; padding: 10px 0 4px; }
+  .fs-panel.open { display: grid; }
+  .reqsel { display: inline-flex; }
+  .fs-panel .sortsel, .fs-panel .sortlbl { width: 100%; justify-content: space-between; }
+  .fs-panel select { max-width: 60%; }
+}
+
 /* adapt: phone and touch comfort */
 .sortsel { display: none; }
 .lshort { display: none; }
@@ -330,7 +350,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   .btn.small, .tabs button, .seg button, .link, .menu button, .bulkbar button, .jchange { min-height: 44px; }
   .btn.small { padding-block: 8px; }
   .link { display: inline-flex; align-items: center; padding: 0 4px; }
-  .row .owner select, #histSel, #colSel { min-height: 44px; }
+  .row .owner select, #histSel, #histSel2, #colSel { min-height: 44px; }
   .note-in { min-height: 44px; }
   .tickbtn { width: 44px; height: 44px; margin: -8px 0 0 -8px; }
   .sel { min-height: 44px; margin: -10px -8px -6px; padding-top: 12px; }
@@ -469,7 +489,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   }
   var state = useRemote ? { items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || { items: sample(), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null };
   if (!state.history) state.history = [];
-  var ui = { sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
+  var ui = { fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function save() { invalidate(); if (useRemote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -617,20 +637,29 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         '<button type="button" data-bulk="explainsave">Save</button><button type="button" class="plain" data-bulk="explaincancel">Cancel</button></div></div>';
     }
     return '<div class="bulkbar" role="region" aria-label="Bulk actions"><span class="bcount">' + n + ' selected</span><div class="bacts">' +
-      '<button type="button" data-bulk="tojeff">Give to Jeff</button><button type="button" data-bulk="takeback">Take back</button>' +
+      '<button type="button" class="primary" data-bulk="tojeff">Give to Jeff</button>' +
       '<button type="button" data-bulk="hubdoc">Mark In Hubdoc</button><button type="button" data-bulk="explain">Explain\u2026</button>' +
-      '<button type="button" class="plain" data-bulk="clear">Clear</button></div></div>';
+      '<button type="button" class="plain" data-bulk="takeback">Take back</button><button type="button" class="plain" data-bulk="clear">Clear</button></div></div>';
   }
 
+  // On phones the request switcher moves into the Filters & sort panel; desktop keeps it in the header.
+  function histCopy() {
+    if (!state.history.length) return '';
+    var opts = '<option value=""' + (!ui.viewId ? ' selected' : '') + '>Current: ' + esc(state.cycle) + '</option>' +
+      state.history.map(function (h) { return '<option value="' + h.id + '"' + (ui.viewId === h.id ? ' selected' : '') + '>' + esc(h.name) + '</option>'; }).join('');
+    return '<label class="sortsel reqsel">Request <select id="histSel2">' + opts + '</select></label>';
+  }
   function toolbar(showJeffTab) {
     var tabs = [['all', 'All'], ['open', 'Open']];
     if (showJeffTab) tabs.push(['jeff', 'With Jeff']);
     tabs.push(['done', 'Done']);
     return '<div class="toolbar"><div class="tabs" role="group" aria-label="Filter">' +
       tabs.map(function (t) { return '<button type="button" data-filter="' + t[0] + '" aria-pressed="' + (ui.filter === t[0]) + '">' + t[1] + '</button>'; }).join('') +
-      '</div>' + (showJeffTab ? selectAllBtn() : '') + sortSelect() + '<label class="sortlbl">Order <span class="seg" role="group" aria-label="Order">' +
+      '</div>' + (showJeffTab ? selectAllBtn() : '') +
+      '<button type="button" class="btn small fs-toggle" data-act="togglefs" aria-expanded="' + !!ui.fsOpen + '" aria-controls="fsPanel">Filters &amp; sort</button>' +
+      '<div class="fs-panel' + (ui.fsOpen ? ' open' : '') + '" id="fsPanel">' + histCopy() + sortSelect() + '<label class="sortlbl">Order <span class="seg" role="group" aria-label="Order">' +
       '<button type="button" data-sort="number" aria-pressed="' + (ui.sort === 'number') + '">By number</button>' +
-      '<button type="button" data-sort="open" aria-pressed="' + (ui.sort === 'open') + '">Open first</button></span></label></div>';
+      '<button type="button" data-sort="open" aria-pressed="' + (ui.sort === 'open') + '">Open first</button></span></label></div></div>';
   }
 
   /* ---------- login ---------- */
@@ -668,10 +697,12 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         '<li>' + mark() + '<span><b>' + st.fresh + '</b> new. These start as waiting on you.</span></li>' +
         (st.twins ? '<li>' + mark('warn') + '<span><b>' + st.twins + '</b> ' + (st.twins === 1 ? 'row repeats' : 'rows repeat') + ' an earlier row exactly (same date, amount, description and account). Kept as separate items.</span></li>' : '') +
         (st.warn && st.warn.noDate ? '<li>' + mark('warn') + '<span><b>' + st.warn.noDate + '</b> ' + (st.warn.noDate === 1 ? 'row has' : 'rows have') + ' no date. ' + (st.warn.noDate === 1 ? 'It goes' : 'They go') + ' under \u201cNo date\u201d.</span></li>' : '') +
-        (st.warn && st.warn.badAmount ? '<li>' + mark('warn') + '<span><b>' + st.warn.badAmount + '</b> ' + (st.warn.badAmount === 1 ? 'row has an amount' : 'rows have amounts') + ' that is not a number.</span></li>' : '') +
+        (st.warn && st.warn.badAmount ? '<li>' + mark('warn') + '<span><b>' + st.warn.badAmount + '</b> ' + (st.warn.badAmount === 1 ? 'row has an amount that is not a number.' : 'rows have amounts that are not numbers.') + '</span></li>' : '') +
         (st.warn && st.warn.noAmount ? '<li>' + mark('warn') + '<span><b>' + st.warn.noAmount + '</b> ' + (st.warn.noAmount === 1 ? 'row has' : 'rows have') + ' no amount.</span></li>' : '') +
-        (st.dropped ? '<li>' + mark() + '<span><b>' + st.dropped + '</b> ' + (st.dropped === 1 ? 'item from the current request is' : 'items from the current request are') + ' not in this sheet. Kept in history.</span></li>' : '') +
+        (st.dropped ? '<li>' + mark() + '<span><b>' + st.dropped + '</b> ' + (st.dropped === 1 ? 'item in \u201c' : 'items in \u201c') + esc(state.cycle) + '\u201d ' + (st.dropped === 1 ? 'is' : 'are') + ' not in this sheet. ' + (st.dropped === 1 ? 'It stays' : 'They stay') + ' in that request, which you can still open from the request list.</span></li>' : '') +
         '</ul>';
+      if (st.warn && (st.warn.noDate || st.warn.badAmount || st.warn.noAmount)) h += '<p class="rnote">Rows with a problem are still added as they are. Fix them in the spreadsheet and import again, or add a note on the row.</p>';
+      if (!st.carried && state.items.length) h += '<p class="rnote">Nothing matched the current request, so every row starts fresh. Rows match on date, amount, description and account.</p>';
       if (pd.preview && pd.preview.length) {
         h += '<table class="preview"><caption class="sr">First rows of the sheet</caption><thead><tr><th>Date</th><th>Item</th><th>Amount</th></tr></thead><tbody>' +
           pd.preview.map(function (r) {
@@ -743,7 +774,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     function headRowFor(g) {
       var nSel = g.items.filter(function (i) { return ui.sel[i.id]; }).length;
       var box = mode === 'client' ? '<div><label class="sel"><input type="checkbox" data-selmonth="' + g.key + '"' + (nSel === g.items.length ? ' checked' : '') + (nSel && nSel < g.items.length ? ' data-partial="1"' : '') + '><span class="sr">Select all items in ' + esc(monthLabel(g.key)) + '</span></label></div>' : '';
-      return '<div class="row head' + (mode === 'bk' ? ' bk' : ' cl') + '">' + box + '<div>No.</div><div>Item</div><div data-sortcell="date">' + sortBtn('date', 'Date') + '</div><div class="cell-a" data-sortcell="amount">' + sortBtn('amount', 'Amount') + '</div><div>Account</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
+      return '<div class="row head' + (mode === 'bk' ? ' bk' : ' cl') + '">' + box + '<div>No.</div><div>Item</div><div data-sortcell="date">' + sortBtn('date', 'Date') + '</div><div class="cell-a" data-sortcell="amount">' + sortBtn('amount', 'Amount') + '</div><div>Account</div><div>Owner</div><div>Status</div><div>Note</div></div>';
     }
     return '<div class="ledger" id="list" tabindex="-1">' + groups.map(function (g) {
       var open = g.items.filter(function (i) { return i.status === 'waiting' || i.status === 'jeff'; }).length;
@@ -833,7 +864,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         var action;
         if (ui.explainFor === i.id) {
           action = '<div class="reason"><label for="jr' + i.id + '">Why is there no document?</label>' +
-            '<input id="jr' + i.id + '" type="text" value="' + esc(i.note) + '" placeholder="e.g. Paid cash, no receipt was given">' +
+            '<input id="jr' + i.id + '" type="text" value="' + esc(i.note) + '" placeholder="e.g. Paid cash, no receipt">' +
             (ui.reasonErr === i.id ? '<span class="err" role="alert">Add a short reason so the bookkeeper knows.</span>' : '') +
             '<div class="acts"><button type="button" class="btn primary" data-jsave="' + i.id + '">Save</button><button type="button" class="btn" data-jcancel="1">Cancel</button></div></div>';
         } else if (open) {
@@ -843,13 +874,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         } else {
           action = '<button type="button" class="btn small jchange" data-jchange="' + i.id + '">Change</button>';
         }
-        var echo = ((i.status === 'missing' || i.status === 'explained') && i.note) ? '<div class="jecho">Your reason: ' + esc(i.note) + '</div>' : '';
+        var echo = '';
         return '<div class="jrow' + (open ? '' : ' resolved') + '" role="listitem"><div class="jno num" aria-hidden="true">' + i.no + '</div><div class="top">' + glyph(i.status, ui.drawId === i.id) +
           '<div><div class="jdesc">' + esc(i.desc) + '</div><div class="meta">' + meta + ' · <span class="jstate">' + esc(JEFF_WORD[i.status]) + '</span></div></div></div>' +
           action + echo +
           '<div><label class="sr" for="jn' + i.id + '">Note for item ' + i.no + '</label><input class="note-in" id="jn' + i.id + '" data-note="' + i.id + '" value="' + esc(i.note) + '" placeholder="Add a note, e.g. what this was for"></div></div>';
       }
-      body = '<div class="jlist" id="list" tabindex="-1">' + (ui.notice ? '<div class="notice" role="status">' + esc(ui.notice) + '</div>' : '') + jtally +
+      body = '<div class="jlist" id="list" tabindex="-1">' + (ui.notice ? '<div class="notice" role="status">' + esc(ui.notice) + (ui.jundo ? ' <button type="button" class="link" data-jundo="1">Undo</button>' : '') + '</div>' : '') + jtally +
         jgroups.map(function (g) {
           var waitingHere = g.items.filter(function (i) { return i.status === 'jeff'; }).length;
           return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead"><span class="mleft"><h2>' + esc(monthLabel(g.key)) + '</h2></span>' +
@@ -886,6 +917,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       if (!skip) { skip = document.createElement('a'); skip.id = 'skiplink'; skip.className = 'skip'; skip.textContent = 'Skip to the checklist'; app.insertBefore(skip, app.firstChild); }
       skip.setAttribute('href', document.getElementById('list') ? '#list' : '#main');
     }
+    var legEl = document.querySelector('.legend');
+    document.documentElement.style.setProperty('--legend-h', (legEl ? Math.round(legEl.getBoundingClientRect().height) : 0) + 'px');
+    document.body.classList.toggle('has-bulk', !!app.querySelector('.bulkbar'));
     var menuNode = app.querySelector('.menu');
     if (menuNode) {
       var menuRow = menuNode.closest('.row'); if (menuRow) menuRow.classList.add('open-menu');
@@ -1100,7 +1134,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (!t) { if (ui.menuFor) { ui.menuFor = null; render(); } return; }
     var d = t.dataset;
     if (d.signin) { state.user = ROLE_EMAIL[d.signin]; state.role = d.signin; save(); render('#main'); return; }
-    if (d.role) { ui.sel = {}; ui.notice = ''; state.role = d.role; state.user = ROLE_EMAIL[d.role]; ui.menuFor = null; ui.filter = 'all'; ui.sort = d.role === 'bookkeeper' ? 'open' : 'number'; save(); render(); return; }
+    if (d.role) { ui.jundo = null; ui.sel = {}; ui.notice = ''; state.role = d.role; state.user = ROLE_EMAIL[d.role]; ui.menuFor = null; ui.filter = 'all'; ui.sort = d.role === 'bookkeeper' ? 'open' : 'number'; save(); render(); return; }
     if (d.act === 'dismisserr') { ui.error = ''; render(); return; }
     if (d.act === 'signout' && remote) { remote.auth.signOut().then(function () { state.user = null; state.role = null; ui.sent = false; render(); }); return; }
     if (d.act === 'signout') { state.user = null; state.role = null; ui.sent = false; save(); render(); return; }
@@ -1141,23 +1175,32 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       var c = ui.col, k = d.col;
       if (k === 'date') ui.col = (c && c.key === 'date') ? null : { key: 'date', dir: -1 };
       else ui.col = !(c && c.key === 'amount') ? { key: 'amount', dir: -1 } : (c.dir === -1 ? { key: 'amount', dir: 1 } : null);
-      render('[data-col="' + k + '"]'); return;
+      render('[data-col="' + k + '"]'); say(!ui.col ? 'Default order.' : 'Sorted by ' + ui.col.key + ', ' + (ui.col.key === 'amount' ? (ui.col.dir === -1 ? 'largest first.' : 'smallest first.') : (ui.col.dir === -1 ? 'newest first.' : 'oldest first.'))); return;
     }
+    if (d.act === 'togglefs') { ui.fsOpen = !ui.fsOpen; render('[data-act="togglefs"]'); return; }
     if (d.filter) { ui.filter = d.filter; render(); var nShown = shownItems().length; say('Showing ' + nShown + (nShown === 1 ? ' item.' : ' items.')); return; }
     if (d.sort) { ui.sort = d.sort; render(); say(d.sort === 'open' ? 'Open items first.' : 'In date order.'); return; }
     if (d.menu) { ui.menuFor = ui.menuFor === d.menu ? null : d.menu; render(ui.menuFor ? '.menu button[aria-checked="true"]' : '[data-menu="' + d.menu + '"]'); return; }
     if (d.set) { var p = d.set.split(':'); setStatus(p[0], p[1], false); render('[data-menu="' + p[0] + '"]'); return; }
     if (d.jset) {
       var q = d.jset.split(':');
-      if (q[1] === 'missing') { ui.explainFor = q[0]; ui.reasonErr = null; render('#jr' + q[0]); return; }
-      setStatus(q[0], q[1], true); var qi = state.items.find(function (x) { return x.id === q[0]; }); announce('Item ' + qi.no + (q[1] === 'hubdoc' ? ' marked done.' : ' flagged.')); render('[data-jchange="' + q[0] + '"]'); return;
+      if (q[1] === 'missing') { ui.explainFor = q[0]; ui.reasonErr = null; render('#jr' + q[0]); var rb = document.querySelector('.reason'); if (rb) rb.scrollIntoView({ block: 'center' }); return; }
+      var qi = state.items.find(function (x) { return x.id === q[0]; }); ui.jundo = { id: qi.id, status: qi.status, note: qi.note }; setStatus(q[0], q[1], true); announce('Item ' + qi.no + (q[1] === 'hubdoc' ? ' marked done.' : ' flagged.')); render('[data-jchange="' + q[0] + '"]'); return;
     }
     if (d.jsave) {
       var reason = ((document.getElementById('jr' + d.jsave) || {}).value || '').trim();
       if (!reason) { ui.reasonErr = d.jsave; render('#jr' + d.jsave); return; }
       var ji = state.items.find(function (x) { return x.id === d.jsave; });
-      ji.note = reason; pushItem(ji, { note: reason });
+      ui.jundo = { id: ji.id, status: ji.status, note: ji.note }; ji.note = reason; pushItem(ji, { note: reason });
       ui.explainFor = null; ui.reasonErr = null; setStatus(d.jsave, 'missing', true); announce('Item ' + ji.no + ' flagged as no document, with your reason.'); render('[data-jchange="' + d.jsave + '"]'); return;
+    }
+    if (d.jundo) {
+      var u = ui.jundo; if (u) {
+        var ui2 = state.items.find(function (x) { return x.id === u.id; });
+        ui2.note = u.note; pushItem(ui2, { note: u.note }); setStatus(u.id, u.status, true);
+        ui.jundo = null; announce('Item ' + ui2.no + ' put back.'); render('[data-jset="' + u.id + ':hubdoc"]');
+      }
+      return;
     }
     if (d.jcancel) { ui.explainFor = null; ui.reasonErr = null; render(); return; }
     if (d.jchange) { setStatus(d.jchange, 'jeff', true); var ci = state.items.find(function (x) { return x.id === d.jchange; }); announce('Item ' + ci.no + ' is waiting for you again.'); render('[data-jset="' + d.jchange + ':hubdoc"]'); return; }
@@ -1191,7 +1234,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       var cv = t.value.split('-'); ui.col = t.value === 'date-asc' ? null : { key: cv[0], dir: cv[1] === 'desc' ? -1 : 1 };
       render('#colSel'); say('Sorted: ' + t.options[t.selectedIndex].text + '.'); return;
     }
-    if (t.id === 'histSel') { ui.importOpen = false; ui.pending = null; ui.importMsg = null; ui.sel = {}; ui.notice = ''; ui.viewId = t.value || null; ui.filter = 'all'; render('#histSel'); return; }
+    if (t.id === 'histSel' || t.id === 'histSel2') { ui.importOpen = false; ui.pending = null; ui.importMsg = null; ui.sel = {}; ui.notice = ''; ui.viewId = t.value || null; ui.filter = 'all'; render('#' + t.id); return; }
     if (t.id === 'csvFile' && t.files[0]) {
       var f = t.files[0], fr = new FileReader();
       if (/\.(xlsx|xls)$/i.test(f.name)) {
