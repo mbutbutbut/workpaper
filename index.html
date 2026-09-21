@@ -8,8 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <style>
 :root {
@@ -192,6 +190,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
 /* selection + bulk actions */
 .row.cl { grid-template-columns: 30px 40px minmax(0, 1.9fr) 92px 96px minmax(0, 1.1fr) 92px 52px minmax(0, 1.7fr); }
+.skip { position: absolute; left: 8px; top: -80px; z-index: 60; background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 3px; font-weight: 600; text-decoration: none; }
+.skip:focus { top: 8px; }
+[tabindex="-1"]:focus { outline: none; }
 .sel { display: grid; place-items: start center; padding: 10px 0 6px; margin: -8px 0 -4px; cursor: pointer; }
 .sel input, .mcheck input { width: 20px; height: 20px; margin: 0; accent-color: var(--ink); cursor: pointer; }
 .mcheck { display: inline-flex; align-items: center; justify-content: center; width: 30px; padding: 8px 0; margin: -8px 0; cursor: pointer; }
@@ -220,6 +221,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .hsort.on { color: var(--ink); }
 .hsort svg { width: 10px; height: 10px; fill: currentColor; align-self: center; }
 .cell-a .hsort { justify-content: flex-end; width: 100%; }
+
+.row:not(.head) { content-visibility: auto; contain-intrinsic-size: auto 64px; }
+.row.open-menu { content-visibility: visible; } /* the status menu hangs below its row and must not be clipped */
 
 /* month groups */
 .month { margin-top: 22px; }
@@ -436,13 +440,27 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   /* ---------- state ---------- */
   var KEY = 'workpaper-prototype-v2';
   var CFG = window.WORKPAPER_CONFIG || {};
-  var remote = (CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase) ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey) : null;
-  var state = remote ? { items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || { items: sample(), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null };
+  var useRemote = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
+  var remote = null; // created after the database library loads, only when configured
+  // Third-party code loads only when needed: the Excel reader on first import, the database library only when configured.
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var el = document.createElement('script'); el.src = src; el.onload = resolve; el.onerror = function () { reject(new Error('Could not load ' + src)); };
+      document.head.appendChild(el);
+    });
+  }
+  var xlsxLoad = null;
+  function ensureXLSX() {
+    if (window.XLSX) return Promise.resolve();
+    xlsxLoad = xlsxLoad || loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js').catch(function (e) { xlsxLoad = null; throw e; });
+    return xlsxLoad;
+  }
+  var state = useRemote ? { items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || { items: sample(), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null };
   if (!state.history) state.history = [];
-  var ui = { sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: !!remote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
+  var ui = { sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
-  function save() { if (remote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function save() { invalidate(); if (useRemote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
   function pastView() { return ui.viewId ? state.history.find(function (h) { return h.id === ui.viewId; }) : null; }
   function viewItems() { var p = pastView(); return p ? p.items : state.items; }
   function viewName() { var p = pastView(); return p ? p.name : state.cycle; }
@@ -495,22 +513,25 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
   // Months run oldest to newest. Inside a month: by date, or open items first.
   function sorted(list) {
-    var out = list.slice();
     var rank = { waiting: 0, jeff: 0, missing: 1, hubdoc: 2, explained: 2 };
-    out.sort(function (a, b) {
-      var ma = monthKey(a), mb = monthKey(b);
-      if (ma !== mb) return ma - mb;
-      if (ui.sort === 'open' && rank[a.status] !== rank[b.status]) return rank[a.status] - rank[b.status];
-      if (ui.col && ui.col.key === 'amount') {
-        var na = parseFloat(String(a.amount).replace(/[$,]/g, '')), nb = parseFloat(String(b.amount).replace(/[$,]/g, ''));
-        if (isNaN(na) !== isNaN(nb)) return isNaN(na) ? 1 : -1;
-        if (!isNaN(na) && na !== nb) return (na - nb) * ui.col.dir;
-      }
-      var dd = dayKey(a) - dayKey(b);
-      if (ui.col && ui.col.key === 'date') dd *= ui.col.dir;
-      return dd || a.no - b.no;
+    var col = ui.col, byOpen = ui.sort === 'open';
+    // Read each date and amount once, not on every comparison.
+    var rows = list.map(function (it) {
+      var n = parseFloat(String(it.amount).replace(/[$,]/g, ''));
+      return { it: it, m: monthKey(it), d: dayKey(it), r: rank[it.status], n: n, nan: isNaN(n) };
     });
-    return out;
+    rows.sort(function (a, b) {
+      if (a.m !== b.m) return a.m - b.m;
+      if (byOpen && a.r !== b.r) return a.r - b.r;
+      if (col && col.key === 'amount') {
+        if (a.nan !== b.nan) return a.nan ? 1 : -1;
+        if (!a.nan && a.n !== b.n) return (a.n - b.n) * col.dir;
+      }
+      var dd = a.d - b.d;
+      if (col && col.key === 'date') dd *= col.dir;
+      return dd || a.it.no - b.it.no;
+    });
+    return rows.map(function (r) { return r.it; });
   }
 
   function filtered(list) {
@@ -528,11 +549,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var seg = ['client', 'jeff', 'bookkeeper'].map(function (r) {
       return '<button type="button" data-role="' + r + '" aria-pressed="' + (role === r) + '">' + ROLE_LABEL[r] + '</button>';
     }).join('');
-    var who = remote ? state.user : ROLE_EMAIL[role];
-    return '<div class="strip' + (remote ? '' : ' proto') + '"><span class="who">Signed in as <strong>' + esc(who) + '</strong> &middot; ' + ROLE_LABEL[role] + '</span>' +
+    var who = useRemote ? state.user : ROLE_EMAIL[role];
+    return '<header class="strip' + (useRemote ? '' : ' proto') + '"><span class="who">Signed in as <strong>' + esc(who) + '</strong> &middot; ' + ROLE_LABEL[role] + '</span>' +
       '<span style="display:inline-flex;gap:12px;align-items:center;flex-wrap:wrap">' +
-      (remote ? '' : '<span class="plabel">Prototype, view as</span><span class="seg" role="group" aria-label="View as">' + seg + '</span>') +
-      '<button type="button" class="link" data-act="signout">Sign out</button></span></div>' +
+      (useRemote ? '' : '<span class="plabel">Prototype, view as</span><span class="seg" role="group" aria-label="View as">' + seg + '</span>') +
+      '<button type="button" class="link" data-act="signout">Sign out</button></span></header>' +
       (ui.error ? '<div class="pastbar" role="alert" style="margin:8px var(--pad) 0;background:var(--red-wash);border-color:var(--red)"><span>' + esc(ui.error) + '</span><button type="button" class="btn small" data-act="dismisserr">Dismiss</button></div>' : '');
   }
 
@@ -564,7 +585,10 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var opts = [['date-asc', 'Date, oldest first'], ['date-desc', 'Date, newest first'], ['amount-desc', 'Amount, largest first'], ['amount-asc', 'Amount, smallest first']];
     return '<label class="sortsel">Sort <select id="colSel">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === v ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>';
   }
-  function shownItems() { return sorted(filtered(viewItems())); }
+  // The shown list is worked out once per render and reused by the toolbar, bulk bar and table.
+  var shownCache = null;
+  function invalidate() { shownCache = null; }
+  function shownItems() { return shownCache || (shownCache = sorted(filtered(viewItems()))); }
   function selectAllBtn() {
     var shown = shownItems();
     var all = shown.length && shown.every(function (i) { return ui.sel[i.id]; });
@@ -605,9 +629,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       '<form id="loginForm"><label for="email">Email</label>' +
       '<input id="email" type="email" autocomplete="email" placeholder="you@example.com" required value="' + esc(ui.email || '') + '">' +
       '<button class="btn primary" type="submit">Email me a sign-in link</button></form>' +
-      (remote && sent ? '<p class="ok" role="status" style="margin:16px 0 0;color:var(--blue);font-weight:500">Check your email for the sign-in link. It works for one sign-in.</p>' : '') +
+      (useRemote && sent ? '<p class="ok" role="status" style="margin:16px 0 0;color:var(--blue);font-weight:500">Check your email for the sign-in link. It works for one sign-in.</p>' : '') +
       (ui.authError ? '<p class="err" role="alert" style="margin:16px 0 0;color:var(--red);font-weight:500">' + esc(ui.authError) + '</p>' : '') +
-      (!remote && sent ? '<div class="proto"><p>Prototype only: no email is sent. Continue as:</p><div class="btns">' +
+      (!useRemote && sent ? '<div class="proto"><p>Prototype only: no email is sent. Continue as:</p><div class="btns">' +
         '<button class="btn" data-signin="client">Client (full checklist)</button>' +
         '<button class="btn" data-signin="jeff">Jeff (his items only)</button>' +
         '<button class="btn" data-signin="bookkeeper">Bookkeeper (read-only)</button></div></div>' : '') +
@@ -707,9 +731,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     function headRowFor(g) {
       var nSel = g.items.filter(function (i) { return ui.sel[i.id]; }).length;
       var box = mode === 'client' ? '<div><label class="sel"><input type="checkbox" data-selmonth="' + g.key + '"' + (nSel === g.items.length ? ' checked' : '') + (nSel && nSel < g.items.length ? ' data-partial="1"' : '') + '><span class="sr">Select all items in ' + esc(monthLabel(g.key)) + '</span></label></div>' : '';
-      return '<div class="row head' + (mode === 'bk' ? ' bk' : ' cl') + '">' + box + '<div>No.</div><div>Item</div><div>' + sortBtn('date', 'Date') + '</div><div class="cell-a">' + sortBtn('amount', 'Amount') + '</div><div>Account</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
+      return '<div class="row head' + (mode === 'bk' ? ' bk' : ' cl') + '">' + box + '<div>No.</div><div>Item</div><div data-sortcell="date">' + sortBtn('date', 'Date') + '</div><div class="cell-a" data-sortcell="amount">' + sortBtn('amount', 'Amount') + '</div><div>Account</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
     }
-    return '<div class="ledger">' + groups.map(function (g) {
+    return '<div class="ledger" id="list" tabindex="-1">' + groups.map(function (g) {
       var open = g.items.filter(function (i) { return i.status === 'waiting' || i.status === 'jeff'; }).length;
       var flag = g.items.filter(function (i) { return i.status === 'missing'; }).length;
       var done = g.items.length - open - flag;
@@ -725,8 +749,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         '<span>' + glyph('hubdoc') + done + ' done</span></span>';
       var nSel = g.items.filter(function (i) { return ui.sel[i.id]; }).length;
       var mcheck = mode === 'client' ? '<label class="mcheck"><input type="checkbox" data-selmonth="' + g.key + '"' + (nSel === g.items.length ? ' checked' : '') + (nSel && nSel < g.items.length ? ' data-partial="1"' : '') + '><span class="sr">Select all items in ' + esc(monthLabel(g.key)) + '</span></label>' : '';
-      return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead' + (mode === 'client' ? ' cl' : '') + '"><span class="mleft">' + mcheck + '<h2>' + esc(monthLabel(g.key)) + '</h2></span>' + count + '</div>' + headRowFor(g) +
-        g.items.map(function (i) { return rowHTML(i, mode); }).join('') + '</section>';
+      return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead' + (mode === 'client' ? ' cl' : '') + '"><span class="mleft">' + mcheck + '<h2>' + esc(monthLabel(g.key)) + '</h2></span>' + count + '</div>' +
+        '<div class="tbl" role="table" aria-label="' + esc(monthLabel(g.key)) + ' items">' + headRowFor(g) +
+        g.items.map(function (i) { return rowHTML(i, mode); }).join('') + '</div></section>';
     }).join('') + '</div>';
   }
 
@@ -753,17 +778,17 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     } else {
       var shownIds = {}; shownItems().forEach(function (i) { shownIds[i.id] = 1; });
       Object.keys(ui.sel).forEach(function (k) { if (!shownIds[k] || past) delete ui.sel[k]; });
-      body = pastBar() + tally() + (past ? '' : bulkBar()) + toolbar(!past) + ledger(sorted(filtered(items)), past ? 'bk' : 'client');
+      body = pastBar() + tally() + (past ? '' : bulkBar()) + toolbar(!past) + ledger(shownItems(), past ? 'bk' : 'client');
     }
-    return strip() + '<main id="main">' + head + (ui.importOpen ? importPanel() : '') + body + '</main>' + (hasItems ? legend() : '');
+    return strip() + '<main id="main" tabindex="-1">' + head + (ui.importOpen ? importPanel() : '') + body + '</main>' + (hasItems ? legend() : '');
   }
 
   /* ---------- bookkeeper ---------- */
   function renderBookkeeper() {
     var past = pastView();
     var head = '<div class="sheet-head"><div><h1>' + esc(viewName()) + '</h1><p>Read-only view of the client’s progress. It updates as they work.</p></div>' + histBar() + '</div>';
-    if (!viewItems().length) return strip() + '<main id="main">' + head + '<div class="empty"><h2>Nothing to show yet</h2><p>The client has not imported this request.</p></div></main>';
-    return strip() + '<main id="main">' + head + pastBar() + tally() + toolbar(false) + ledger(sorted(filtered(viewItems())), 'bk') + '</main>' + legend();
+    if (!viewItems().length) return strip() + '<main id="main" tabindex="-1">' + head + '<div class="empty"><h2>Nothing to show yet</h2><p>The client has not imported this request.</p></div></main>';
+    return strip() + '<main id="main" tabindex="-1">' + head + pastBar() + tally() + toolbar(false) + ledger(shownItems(), 'bk') + '</main>' + legend();
   }
 
   /* ---------- jeff ---------- */
@@ -812,7 +837,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
           action + echo +
           '<div><label class="sr" for="jn' + i.id + '">Note for item ' + i.no + '</label><input class="note-in" id="jn' + i.id + '" data-note="' + i.id + '" value="' + esc(i.note) + '" placeholder="Add a note, e.g. what this was for"></div></div>';
       }
-      body = '<div class="jlist">' + (ui.notice ? '<div class="notice" role="status">' + esc(ui.notice) + '</div>' : '') + jtally +
+      body = '<div class="jlist" id="list" tabindex="-1">' + (ui.notice ? '<div class="notice" role="status">' + esc(ui.notice) + '</div>' : '') + jtally +
         jgroups.map(function (g) {
           var waitingHere = g.items.filter(function (i) { return i.status === 'jeff'; }).length;
           return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead"><span class="mleft"><h2>' + esc(monthLabel(g.key)) + '</h2></span>' +
@@ -821,12 +846,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         '<ul class="jlegend" aria-label="What the marks mean">' +
         '<li>' + glyph('jeff') + 'Waiting for you</li><li>' + glyph('hubdoc') + 'Done</li><li>' + glyph('missing') + 'No document</li><li>' + glyph('explained') + 'Noted by client</li></ul>';
     }
-    return strip() + '<main id="main">' + head + body + '</main>';
+    return strip() + '<main id="main" tabindex="-1">' + head + body + '</main>';
   }
 
   /* ---------- render ---------- */
   var app = document.getElementById('app');
   function render(focusSel) {
+    invalidate();
     var scroll = window.scrollY;
     if (ui.loading) app.innerHTML = '<div class="login"><div class="login-sheet"><h1>Workpaper</h1><p class="sub">Loading\u2026</p></div></div>';
     else if (!state.user) app.innerHTML = renderLogin();
@@ -834,8 +860,23 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     else if (state.role === 'bookkeeper') app.innerHTML = renderBookkeeper();
     else app.innerHTML = renderClient();
     ui.drawId = null;
+    app.querySelectorAll('.tbl .row').forEach(function (row) {
+      var head = row.classList.contains('head');
+      row.setAttribute('role', 'row');
+      Array.prototype.forEach.call(row.children, function (c) { c.setAttribute('role', head ? 'columnheader' : 'cell'); });
+    });
+    app.querySelectorAll('[data-sortcell]').forEach(function (c) {
+      var k = c.getAttribute('data-sortcell'), on = ui.col && ui.col.key === k;
+      c.setAttribute('aria-sort', on ? (ui.col.dir === -1 ? 'descending' : 'ascending') : (k === 'date' ? 'ascending' : 'none'));
+    });
+    var skip = document.getElementById('skiplink');
+    if (state.user && !ui.loading) {
+      if (!skip) { skip = document.createElement('a'); skip.id = 'skiplink'; skip.className = 'skip'; skip.textContent = 'Skip to the checklist'; app.insertBefore(skip, app.firstChild); }
+      skip.setAttribute('href', document.getElementById('list') ? '#list' : '#main');
+    }
     var menuNode = app.querySelector('.menu');
     if (menuNode) {
+      var menuRow = menuNode.closest('.row'); if (menuRow) menuRow.classList.add('open-menu');
       var legNode = document.querySelector('.legend'), limit = window.innerHeight - (legNode ? legNode.getBoundingClientRect().height : 0) - 8;
       if (menuNode.getBoundingClientRect().bottom > limit) menuNode.classList.add('up');
     }
@@ -1051,7 +1092,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (d.act === 'dismisserr') { ui.error = ''; render(); return; }
     if (d.act === 'signout' && remote) { remote.auth.signOut().then(function () { state.user = null; state.role = null; ui.sent = false; render(); }); return; }
     if (d.act === 'signout') { state.user = null; state.role = null; ui.sent = false; save(); render(); return; }
-    if (d.act === 'openimport') { ui.importOpen = true; ui.importMsg = null; ui.pending = null; ui.viewId = null; render('#csvText'); return; }
+    if (d.act === 'openimport') { ensureXLSX().catch(function () {}); ui.importOpen = true; ui.importMsg = null; ui.pending = null; ui.viewId = null; render('#csvText'); return; }
     if (d.act === 'closeimport') { ui.importOpen = false; ui.pending = null; ui.importMsg = null; render(); return; }
     if (d.act === 'checkpaste') {
       var txt = (document.getElementById('csvText') || {}).value || '';
@@ -1142,14 +1183,16 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (t.id === 'csvFile' && t.files[0]) {
       var f = t.files[0], fr = new FileReader();
       if (/\.(xlsx|xls)$/i.test(f.name)) {
-        if (!window.XLSX) { ui.importMsg = { kind: 'err', text: 'Excel support did not load. Save the sheet as CSV and try again.' }; render(); return; }
-        fr.onload = function () {
-          try {
-            var wb = XLSX.read(new Uint8Array(fr.result), { type: 'array' });
-            stageRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' }));
-          } catch (err) { ui.importMsg = { kind: 'err', text: 'Could not read that Excel file.' }; render(); }
-        };
-        fr.readAsArrayBuffer(f);
+        ui.importMsg = { kind: 'ok', text: 'Reading the Excel file\u2026' }; render();
+        ensureXLSX().then(function () {
+          fr.onload = function () {
+            try {
+              var wb = XLSX.read(new Uint8Array(fr.result), { type: 'array' });
+              stageRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' }));
+            } catch (err) { ui.importMsg = { kind: 'err', text: 'Could not read that Excel file. Try saving it as CSV.' }; render(); }
+          };
+          fr.readAsArrayBuffer(f);
+        }).catch(function () { ui.importMsg = { kind: 'err', text: 'The Excel reader did not load. Check your connection, or save the sheet as CSV and try again.' }; render(); });
       } else {
         fr.onload = function () { stageRows(parseCSV(String(fr.result))); };
         fr.readAsText(f);
@@ -1161,6 +1204,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (e.target.id === 'loginForm') {
       e.preventDefault();
       ui.email = document.getElementById('email').value;
+      if (useRemote && !remote) { ui.authError = 'The sign-in service is not available. Check your connection and refresh the page.'; render('#email'); return; }
       if (remote) {
         ui.authError = '';
         remote.auth.signInWithOtp({ email: ui.email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } }).then(function (r) {
@@ -1172,6 +1216,19 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       }
       ui.sent = true; render('[data-signin="client"]');
     }
+  });
+
+  // Close the status menu when focus moves to something else. Runs after the event so a re-render (which briefly drops focus) does not close it.
+  app.addEventListener('focusout', function () {
+    if (!ui.menuFor) return;
+    setTimeout(function () {
+      var at = document.activeElement;
+      if (!ui.menuFor || !at || at === document.body || (at.closest && at.closest('.menu')) || (at.dataset && at.dataset.menu)) return;
+      var menuNode = app.querySelector('.menu'), trigger = app.querySelector('[data-menu="' + ui.menuFor + '"]');
+      if (menuNode) { var mr = menuNode.closest('.row'); menuNode.remove(); if (mr) mr.classList.remove('open-menu'); }
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      ui.menuFor = null;
+    }, 0);
   });
 
   document.addEventListener('keydown', function (e) {
@@ -1186,12 +1243,15 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (e.key === 'Escape' && ui.menuFor) { var id = ui.menuFor; ui.menuFor = null; render('[data-menu="' + id + '"]'); }
   });
 
-  if (remote) {
-    render();
-    remote.auth.getSession().then(function (r) { enterSession(r.data.session); });
-    remote.auth.onAuthStateChange(function (ev, session) { if (ev === 'SIGNED_OUT') { state.user = null; state.role = null; render(); } });
-  } else {
-    render();
+  render();
+  if (useRemote) {
+    loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2').then(function () {
+      remote = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
+      remote.auth.getSession().then(function (r) { enterSession(r.data.session); });
+      remote.auth.onAuthStateChange(function (ev, session) { if (ev === 'SIGNED_OUT') { state.user = null; state.role = null; render(); } });
+    }).catch(function () {
+      ui.loading = false; ui.authError = 'Could not reach the sign-in service. Check your connection and refresh.'; render();
+    });
   }
 })();
 </script>
