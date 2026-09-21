@@ -33,7 +33,9 @@ Deploy this folder as a static site (no build step). `.vercelignore` keeps the d
 
 ## 5. Check the rules
 
-Sign in as each person and confirm:
+Paste `supabase/role-check.sql` into the SQL editor and run it. It acts as each person in turn, using the same database rules the app uses, then shows a PASS/FAIL table. Every row must say PASS, and it deletes its own test data.
+
+Then confirm in the real app, signed in as each person:
 - Jeff sees only his items and can change only status and note.
 - The bookkeeper sees everything and can change nothing.
 - You can import, reassign and edit.
