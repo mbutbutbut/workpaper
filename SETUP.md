@@ -72,3 +72,28 @@ Then confirm in the real app, signed in as each person:
 ## Locally
 
 Leave `config.js` empty to run the prototype with sample data in your browser. To test with the real database, fill it in and serve the folder: `python3 -m http.server 8000`.
+
+## 7. Let Claude read the checklist (optional, read-only)
+
+`mcp/server.js` is a small MCP server with no dependencies. It signs in as a Workpaper user and can only read: `list_requests`, `list_items`, `summary`, `get_conversation`. The database rules decide what it sees, so use an Admin login to see everything.
+
+Add it to your MCP client (for example Claude Desktop's config) with your own values, typed by you and never stored in the repo:
+
+```json
+{
+  "mcpServers": {
+    "workpaper": {
+      "command": "node",
+      "args": ["/full/path/to/this/folder/mcp/server.js"],
+      "env": {
+        "WORKPAPER_SUPABASE_URL": "https://YOUR-PROJECT.supabase.co",
+        "WORKPAPER_SUPABASE_KEY": "your publishable key (same as config.js)",
+        "WORKPAPER_EMAIL": "your admin email",
+        "WORKPAPER_PASSWORD": "your admin password"
+      }
+    }
+  }
+}
+```
+
+Restart the client, then ask: "What's still open for Jeff?"
