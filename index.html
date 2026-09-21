@@ -188,10 +188,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
 /* selection + bulk actions */
 .row.cl { grid-template-columns: 30px 40px minmax(0, 1.9fr) 92px 96px minmax(0, 1.1fr) 92px 52px minmax(0, 1.7fr); }
-.sel { display: grid; place-items: start center; padding: 6px 0; margin: -8px 0; cursor: pointer; }
+.sel { display: grid; place-items: start center; padding: 10px 0 6px; margin: -8px 0 -4px; cursor: pointer; }
 .sel input, .mcheck input { width: 20px; height: 20px; margin: 0; accent-color: var(--ink); cursor: pointer; }
-.mcheck { display: inline-flex; align-items: center; padding: 8px 10px 8px 0; margin: -8px 0; cursor: pointer; }
-.mhead .mleft { display: inline-flex; align-items: baseline; gap: 4px; }
+.mcheck { display: inline-flex; align-items: center; justify-content: center; width: 30px; padding: 8px 0; margin: -8px 0; cursor: pointer; }
+.mhead.cl { padding-left: 0; }
+.mhead .mleft { display: inline-flex; align-items: center; gap: 10px; }
 .row.selected { background-color: var(--blue-wash); }
 .row.selected.flag { background-color: var(--red-wash); }
 .bulkbar { position: sticky; top: 0; z-index: 15; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; background: var(--ink); color: var(--paper); padding: 10px 14px; margin: 8px 0; border-radius: 3px; box-shadow: 0 8px 16px -10px rgba(31, 41, 51, .55); }
@@ -262,6 +263,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   .bulkbar button { font-size: 14px; padding: 4px 8px; line-height: 1.2; }
   .bulkbar .reasonbox { grid-column: 1 / -1; }
   .row.cl { grid-template-columns: 28px 28px minmax(0, 1fr) 44px; }
+  .mcheck { width: 28px; }
   .row.cl .sel { grid-column: 1; grid-row: 1; }
   .row.cl .no { grid-column: 2; grid-row: 1; }
   .row.cl .descc { grid-column: 3; grid-row: 1; }
@@ -635,7 +637,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         '<span>' + glyph('hubdoc') + done + ' done</span></span>';
       var nSel = g.items.filter(function (i) { return ui.sel[i.id]; }).length;
       var mcheck = mode === 'client' ? '<label class="mcheck"><input type="checkbox" data-selmonth="' + g.key + '"' + (nSel === g.items.length ? ' checked' : '') + (nSel && nSel < g.items.length ? ' data-partial="1"' : '') + '><span class="sr">Select all items in ' + esc(monthLabel(g.key)) + '</span></label>' : '';
-      return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead"><span class="mleft">' + mcheck + '<h2>' + esc(monthLabel(g.key)) + '</h2></span>' + count + '</div>' + headRow +
+      return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead' + (mode === 'client' ? ' cl' : '') + '"><span class="mleft">' + mcheck + '<h2>' + esc(monthLabel(g.key)) + '</h2></span>' + count + '</div>' + headRow +
         g.items.map(function (i) { return rowHTML(i, mode); }).join('') + '</section>';
     }).join('') + '</div>';
   }
