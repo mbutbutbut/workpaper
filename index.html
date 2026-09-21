@@ -342,6 +342,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   .fs-panel select { max-width: 60%; }
 }
 
+/* account + login extras */
+.acct form { display: grid; gap: 4px; max-width: 420px; }
+.acct label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin: 8px 0 2px; }
+.acct input { width: 100%; border: 1px solid var(--ink); background: var(--field); padding: 10px 12px; border-radius: 3px; min-height: 44px; }
+.forgot { margin: 16px 0 0; color: var(--ink-soft); font-size: 14px; }
+.login-sheet .btn[disabled] { opacity: .6; cursor: progress; }
+
 /* adapt: phone and touch comfort */
 .sortsel { display: none; }
 .lshort { display: none; }
@@ -489,7 +496,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   }
   var state = useRemote ? { items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || { items: sample(), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null };
   if (!state.history) state.history = [];
-  var ui = { fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
+  var ui = { accountOpen: false, acctMsg: null, busy: false, fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function save() { invalidate(); if (useRemote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -585,7 +592,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     return '<header class="strip' + (useRemote ? '' : ' proto') + '"><span class="who">Signed in as <strong>' + esc(who) + '</strong> &middot; ' + ROLE_LABEL[role] + '</span>' +
       '<span style="display:inline-flex;gap:12px;align-items:center;flex-wrap:wrap">' +
       (useRemote ? '' : '<span class="plabel">Prototype, view as</span><span class="seg" role="group" aria-label="View as">' + seg + '</span>') +
-      '<button type="button" class="link" data-act="signout">Sign out</button></span></header>' +
+      (useRemote ? '<button type="button" class="link" data-act="account">Account</button>' : '') + '<button type="button" class="link" data-act="signout">Sign out</button></span></header>' +
       (ui.error ? '<div class="pastbar" role="alert" style="margin:8px var(--pad) 0;background:var(--red-wash);border-color:var(--red)"><span>' + esc(ui.error) + '</span><button type="button" class="btn small" data-act="dismisserr">Dismiss</button></div>' : '');
   }
 
@@ -668,15 +675,28 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     return '<div class="login"><div class="login-sheet"><h1>Workpaper</h1>' +
       '<p class="sub">The shared checklist for your bookkeeper’s document request.</p><div class="rule"></div>' +
       '<form id="loginForm"><label for="email">Email</label>' +
-      '<input id="email" type="email" autocomplete="email" placeholder="you@example.com" required value="' + esc(ui.email || '') + '">' +
-      '<button class="btn primary" type="submit">Email me a sign-in link</button></form>' +
-      (useRemote && sent ? '<p class="ok" role="status" style="margin:16px 0 0;color:var(--blue);font-weight:500">Check your email for the sign-in link. It works for one sign-in.</p>' : '') +
+      '<input id="email" type="email" autocomplete="username" placeholder="you@example.com" required value="' + esc(ui.email || '') + '">' +
+      (useRemote ? '<label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required>' : '') +
+      '<button class="btn primary" type="submit"' + (ui.busy ? ' disabled' : '') + '>' + (useRemote ? (ui.busy ? 'Signing in…' : 'Sign in') : 'Email me a sign-in link') + '</button></form>' +
       (ui.authError ? '<p class="err" role="alert" style="margin:16px 0 0;color:var(--red);font-weight:500">' + esc(ui.authError) + '</p>' : '') +
+      (useRemote ? '<p class="forgot">Forgot your password? Ask the person who set up your account to reset it.</p>' : '') +
       (!useRemote && sent ? '<div class="proto"><p>Prototype only: no email is sent. Continue as:</p><div class="btns">' +
         '<button class="btn" data-signin="client">Client (full checklist)</button>' +
         '<button class="btn" data-signin="jeff">Jeff (his items only)</button>' +
         '<button class="btn" data-signin="bookkeeper">Bookkeeper (read-only)</button></div></div>' : '') +
       '</div></div>';
+  }
+
+  // Signed-in people manage their own password here.
+  function accountPanel() {
+    return '<section class="import acct" aria-labelledby="acctH"><h2 id="acctH">Your account</h2>' +
+      '<p>Signed in as <b>' + esc(state.user) + '</b>. Choose a new password of at least 10 characters.</p>' +
+      '<form id="pwForm"><label for="pwCur">Current password</label><input id="pwCur" type="password" autocomplete="current-password" required>' +
+      '<label for="pwNew">New password</label><input id="pwNew" type="password" autocomplete="new-password" minlength="10" required>' +
+      '<label for="pwNew2">Type the new password again</label><input id="pwNew2" type="password" autocomplete="new-password" minlength="10" required>' +
+      '<div class="acts"><button class="btn primary" type="submit"' + (ui.busy ? ' disabled' : '') + '>Change password</button>' +
+      '<button class="btn" type="button" data-act="closeaccount">Cancel</button>' +
+      (ui.acctMsg ? '<span class="' + ui.acctMsg.kind + '" role="alert">' + esc(ui.acctMsg.text) + '</span>' : '') + '</div></form></section>';
   }
 
   /* ---------- client ---------- */
@@ -903,6 +923,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     else if (state.role === 'bookkeeper') app.innerHTML = renderBookkeeper();
     else app.innerHTML = renderClient();
     ui.drawId = null;
+    if (useRemote && state.user && ui.accountOpen) { var mainEl = app.querySelector('main'); if (mainEl) mainEl.insertAdjacentHTML('afterbegin', accountPanel()); }
     app.querySelectorAll('.tbl .row').forEach(function (row) {
       var head = row.classList.contains('head');
       row.setAttribute('role', 'row');
@@ -1136,7 +1157,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (d.signin) { state.user = ROLE_EMAIL[d.signin]; state.role = d.signin; save(); render('#main'); return; }
     if (d.role) { ui.jundo = null; ui.sel = {}; ui.notice = ''; state.role = d.role; state.user = ROLE_EMAIL[d.role]; ui.menuFor = null; ui.filter = 'all'; ui.sort = d.role === 'bookkeeper' ? 'open' : 'number'; save(); render(); return; }
     if (d.act === 'dismisserr') { ui.error = ''; render(); return; }
-    if (d.act === 'signout' && remote) { remote.auth.signOut().then(function () { state.user = null; state.role = null; ui.sent = false; render(); }); return; }
+    if (d.act === 'account') { ui.accountOpen = !ui.accountOpen; ui.acctMsg = null; render(ui.accountOpen ? '#pwCur' : '[data-act="account"]'); return; }
+    if (d.act === 'closeaccount') { ui.accountOpen = false; ui.acctMsg = null; render('[data-act="account"]'); return; }
+    if (d.act === 'signout' && remote) { ui.accountOpen = false; ui.acctMsg = null; remote.auth.signOut().then(function () { state.user = null; state.role = null; ui.sent = false; render(); }); return; }
     if (d.act === 'signout') { state.user = null; state.role = null; ui.sent = false; save(); render(); return; }
     if (d.act === 'openimport') { ensureXLSX().catch(function () {}); ui.importOpen = true; ui.importMsg = null; ui.pending = null; ui.viewId = null; render('#csvText'); return; }
     if (d.act === 'closeimport') { ui.importOpen = false; ui.pending = null; ui.importMsg = null; render(); return; }
@@ -1258,24 +1281,44 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   app.addEventListener('submit', function (e) {
     if (e.target.id === 'loginForm') {
       e.preventDefault();
-      ui.email = document.getElementById('email').value;
+      ui.email = document.getElementById('email').value.trim();
       if (useRemote && !remote) { ui.authError = 'The sign-in service is not available. Check your connection and refresh the page.'; render('#email'); return; }
       if (remote) {
-        ui.authError = '';
-        remote.auth.signInWithOtp({ email: ui.email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } }).then(function (r) {
+        if (ui.busy) return;
+        var pw = document.getElementById('password').value;
+        ui.authError = ''; ui.busy = true; render();
+        remote.auth.signInWithPassword({ email: ui.email, password: pw }).then(function (r) {
+          ui.busy = false;
           if (r.error) {
-            var limited = r.error.status === 429 || /rate limit|security purposes|seconds/i.test(r.error.message || '');
-            ui.authError = limited
-              ? 'A link was already sent to that address. Check your inbox and Spam, and wait a minute before asking for another.'
-              : 'Could not send the link. Check the email address, or ask the account owner to add you.';
-            ui.sent = limited;
+            ui.authError = (r.error.status === 429 || /rate limit|too many/i.test(r.error.message || ''))
+              ? 'Too many attempts. Wait a minute and try again.'
+              : 'That email or password is not right.';
+            render('#password'); return;
           }
-          else ui.sent = true;
-          render('#email');
-        });
+          ui.loading = true; render(); enterSession(r.data.session);
+        }).catch(function () { ui.busy = false; ui.authError = 'Could not reach the sign-in service. Check your connection and try again.'; render('#password'); });
         return;
       }
       ui.sent = true; render('[data-signin="client"]');
+      return;
+    }
+    if (e.target.id === 'pwForm') {
+      e.preventDefault();
+      if (ui.busy || !remote) return;
+      var cur = document.getElementById('pwCur').value, n1 = document.getElementById('pwNew').value, n2 = document.getElementById('pwNew2').value;
+      function fail(text, focus) { ui.busy = false; ui.acctMsg = { kind: 'err', text: text }; render(focus); }
+      if (n1.length < 10) { ui.acctMsg = { kind: 'err', text: 'The new password needs at least 10 characters.' }; render('#pwNew'); return; }
+      if (n1 !== n2) { ui.acctMsg = { kind: 'err', text: 'The two new passwords do not match.' }; render('#pwNew2'); return; }
+      if (n1 === cur) { ui.acctMsg = { kind: 'err', text: 'Choose a password that is different from the current one.' }; render('#pwNew'); return; }
+      ui.busy = true; ui.acctMsg = null; render();
+      // Check the current password first, so someone at an unattended screen cannot change it.
+      remote.auth.signInWithPassword({ email: state.user, password: cur }).then(function (r) {
+        if (r.error) return fail('The current password is not right.', '#pwCur');
+        return remote.auth.updateUser({ password: n1 }).then(function (u) {
+          if (u.error) return fail(/weak|short|least/i.test(u.error.message || '') ? 'That password is too weak. Try a longer one.' : 'Could not change the password. Try again.', '#pwNew');
+          ui.busy = false; ui.accountOpen = false; ui.acctMsg = null; announce('Your password was changed.'); render('[data-act="account"]');
+        });
+      }).catch(function () { fail('Could not reach the service. Check your connection and try again.', '#pwCur'); });
     }
   });
 

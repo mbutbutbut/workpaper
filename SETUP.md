@@ -12,9 +12,18 @@ Nothing here stores documents; those stay in Hubdoc.
 
 ## 2. Set up sign-in
 
-1. **Authentication > Providers > Email**: keep Email enabled. Turn **off** "Allow new users to sign up" (only people you add can sign in).
-2. **Authentication > URL Configuration**: set Site URL to your Vercel address once you have it (step 4). While testing, `http://localhost:8000` works.
-3. **Authentication > Users > Add user > Send invitation** (or "Create new user"): add yourself, Jeff, and the bookkeeper by email.
+People sign in with their email and a password, so no email service is needed.
+
+1. **Authentication > Sign In / Providers**: keep Email enabled. Turn **off** "Allow new users to sign up" (only people you add can sign in). In the Email settings, set the minimum password length to 10.
+2. **Authentication > URL Configuration**: set Site URL to your Vercel address, and add `<your address>/**` under Redirect URLs.
+3. **Authentication > Users > Add user > Create new user**: add yourself, Jeff, and the bookkeeper. Type each person's email and a first password, and tick **Auto Confirm User**. Do not use "Send invitation".
+4. Give each person their first password directly. They can change it themselves inside the app (Account, top right).
+
+**If someone forgets their password**, reset it in the SQL editor (then tell them the new one):
+
+```sql
+update auth.users set encrypted_password = crypt('NewPassword123', gen_salt('bf')) where email = 'person@example.com';
+```
 
 ## 3. Give each person a role
 
