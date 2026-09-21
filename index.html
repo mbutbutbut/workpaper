@@ -303,6 +303,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   * { transition: none !important; }
 }
 
+/* jeff: the same workpaper page, numbered ruled rows */
+.jlist { max-width: 760px; }
+.jlist .month { margin-top: 18px; }
+.jrow { display: grid; grid-template-columns: 34px minmax(0, 1fr); column-gap: 10px; row-gap: 10px; padding: 16px 0; }
+.jrow > .jno { grid-column: 1; grid-row: 1; color: var(--ink-soft); font-size: 14px; padding-top: 3px; }
+.jrow > :not(.jno) { grid-column: 2; }
+
 /* adapt: phone and touch comfort */
 .sortsel { display: none; }
 .lshort { display: none; }
@@ -762,7 +769,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   var JEFF_WORD = { jeff: 'Waiting for you', hubdoc: 'Done', missing: 'Can’t find', explained: 'No document', waiting: 'Waiting' };
 
   function renderJeff() {
-    var mine = state.items.filter(function (i) { return i.owner === 'jeff'; }).sort(function (a, b) { return a.no - b.no; });
+    var mine = state.items.filter(function (i) { return i.owner === 'jeff'; }).sort(function (a, b) {
+      return monthKey(a) - monthKey(b) || dayKey(a) - dayKey(b) || a.no - b.no;
+    });
     var waiting = mine.filter(function (i) { return i.status === 'jeff'; }).length;
     var lead = mine.length ? (waiting ? waiting + ' of ' + mine.length + ' items still need you.' : 'All ' + mine.length + ' items are dealt with. Thank you.') : 'Nothing has been passed to you yet.';
     var hint = waiting ? ' Upload each receipt to Hubdoc first, then tap “I have it”.' : '';
@@ -771,9 +780,18 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (!mine.length) {
       body = '<div class="empty"><h2>Nothing for you yet</h2><p>When the client passes purchases to you, they will show up here.</p></div>';
     } else {
-      body = (ui.notice ? '<div class="notice" role="status">' + esc(ui.notice) + '</div>' : '') + '<div role="list">' + mine.map(function (i) {
+      var jc = { jeff: 0, hubdoc: 0, missing: 0, explained: 0 };
+      mine.forEach(function (i) { if (jc[i.status] != null) jc[i.status]++; });
+      var jtally = '<div class="tally" aria-label="Summary">' +
+        '<span>' + glyph('jeff') + '<b class="num">' + jc.jeff + '</b> waiting for you</span>' +
+        '<span>' + glyph('hubdoc') + '<b class="num">' + jc.hubdoc + '</b> done</span>' +
+        (jc.missing ? '<span>' + glyph('missing') + '<b class="num">' + jc.missing + '</b> can\u2019t find</span>' : '') +
+        (jc.explained ? '<span>' + glyph('explained') + '<b class="num">' + jc.explained + '</b> no document</span>' : '') + '</div>';
+      var jgroups = [], jlast;
+      mine.forEach(function (i) { var k = monthKey(i); if (!jlast || jlast.key !== k) { jlast = { key: k, items: [] }; jgroups.push(jlast); } jlast.items.push(i); });
+      function jrowHTML(i) {
         var open = i.status === 'jeff';
-        var meta = 'Item ' + i.no + ' · ' + esc(i.date) + (i.amount ? ' · <span class="num">' + money(i.amount) + '</span>' : '');
+        var meta = esc(i.date) + (i.amount ? ' · <span class="num">' + money(i.amount) + '</span>' : '');
         var action;
         if (ui.explainFor === i.id) {
           action = '<div class="reason"><label for="jr' + i.id + '">Why is there no document?</label>' +
@@ -789,11 +807,17 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
           action = '<button type="button" class="btn small jchange" data-jchange="' + i.id + '">Change</button>';
         }
         var echo = (i.status === 'explained' && i.note) ? '<div class="jecho">Your reason: ' + esc(i.note) + '</div>' : '';
-        return '<div class="jrow' + (open ? '' : ' resolved') + '" role="listitem"><div class="top">' + glyph(i.status, ui.drawId === i.id) +
+        return '<div class="jrow' + (open ? '' : ' resolved') + '" role="listitem"><div class="jno num" aria-hidden="true">' + i.no + '</div><div class="top">' + glyph(i.status, ui.drawId === i.id) +
           '<div><div class="jdesc">' + esc(i.desc) + '</div><div class="meta">' + meta + ' · <span class="jstate">' + esc(JEFF_WORD[i.status]) + '</span></div></div></div>' +
           action + echo +
           '<div><label class="sr" for="jn' + i.id + '">Note for item ' + i.no + '</label><input class="note-in" id="jn' + i.id + '" data-note="' + i.id + '" value="' + esc(i.note) + '" placeholder="Add a note, e.g. what this was for"></div></div>';
-      }).join('') + '</div>' +
+      }
+      body = '<div class="jlist">' + (ui.notice ? '<div class="notice" role="status">' + esc(ui.notice) + '</div>' : '') + jtally +
+        jgroups.map(function (g) {
+          var waitingHere = g.items.filter(function (i) { return i.status === 'jeff'; }).length;
+          return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead"><span class="mleft"><h2>' + esc(monthLabel(g.key)) + '</h2></span>' +
+            '<span class="mcount"><span>' + glyph('jeff') + waitingHere + ' waiting for you</span></span></div><div role="list">' + g.items.map(jrowHTML).join('') + '</div></section>';
+        }).join('') + '</div>' +
         '<ul class="jlegend" aria-label="What the marks mean">' +
         '<li>' + glyph('jeff') + 'Waiting for you</li><li>' + glyph('hubdoc') + 'Done</li><li>' + glyph('missing') + 'Can’t find</li><li>' + glyph('explained') + 'No document</li></ul>';
     }
