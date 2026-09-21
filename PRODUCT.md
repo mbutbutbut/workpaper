@@ -34,7 +34,7 @@ Bookkeeping runs on recurring cycles (month-end, quarter-end, tax season). Reque
 
 - Confirmed: import the bookkeeper's spreadsheet as checklist items; per-item status and a short note; assign items to Jeff; Jeff has his own filtered list and updates his own statuses; bookkeeper has a live shared view; user login for all roles.
 - Documents stay in Hubdoc. The product stores no files.
-- Proposed statuses (unconfirmed): Waiting on me, In Hubdoc, With Jeff, Can't find, Explained (no document exists, with a reason).
+- Statuses: Waiting on me, In Hubdoc, With Jeff, No document (red flag, always with a note; set by Jeff or the client), Explained (the client has accepted the reason and closed the item).
 - Undecided: authentication method, stack, exact import format, whether the bookkeeper can reply or reopen items, reminders (out of scope for v1).
 
 ## Evidence on Hand
