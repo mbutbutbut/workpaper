@@ -408,6 +408,18 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .jrow .thread { grid-column: 2; border: 1px solid var(--rule-strong); border-radius: 3px; }
 .thread-row-hidden { display: none; }
 
+/* edit, remove and delete */
+.msg .edited { color: var(--ink-soft); font-size: 13px; }
+.msg .macts { display: flex; gap: 14px; align-items: center; margin-top: 2px; font-size: 14px; }
+.msg .macts .ask { font-weight: 600; }
+.msg.editing textarea { width: 100%; min-height: 76px; border: 1px solid var(--ink); background: var(--field); padding: 10px 12px; border-radius: 3px; font-size: 16px; margin-top: 4px; }
+.msg.editing .acts { display: flex; gap: 8px; margin-top: 6px; }
+.msg.editing .err { display: block; color: var(--red); font-weight: 500; }
+.msg p.removed { font-family: var(--font-ui); font-size: 14px; font-style: italic; color: var(--ink-soft); }
+.bulkbar .ask { font-weight: 600; flex: 1 1 320px; }
+.bulkbar button.dangerbtn { border-color: var(--red-on-ink); background: var(--red-on-ink); color: var(--ink); }
+.bulkbar button.dangerbtn:hover { background: #ffffff; }
+
 /* adapt: phone and touch comfort */
 .sortsel { display: none; }
 .lshort { display: none; }
@@ -571,7 +583,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   var state = useRemote ? { comments: {}, items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || (function () { var it = sample(); return { items: it, comments: sampleComments(it), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null }; })();
   if (!state.history) state.history = [];
   if (!state.comments) state.comments = {};
-  var ui = { threadFor: null, threadErr: '', draft: {}, teamOpen: false, team: { people: null, msg: null, draft: { email: '', role: 'jeff', password: '' }, confirmRemove: null, resetFor: null, busy: false }, accountOpen: false, acctMsg: null, busy: false, fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
+  var ui = { editMsg: null, removeMsg: null, bulkDelete: false, threadFor: null, threadErr: '', draft: {}, teamOpen: false, team: { people: null, msg: null, draft: { email: '', role: 'jeff', password: '' }, confirmRemove: null, resetFor: null, busy: false }, accountOpen: false, acctMsg: null, busy: false, fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function save() { invalidate(); if (useRemote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -718,6 +730,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function bulkBar() {
     var n = selectedItems().length;
     if (!n) return ui.notice ? '<div class="notice" role="status">' + esc(ui.notice) + '</div>' : '';
+    if (ui.bulkDelete) {
+      var pl = n === 1;
+      return '<div class="bulkbar" role="alertdialog" aria-label="Confirm delete"><div class="reasonbox"><span class="ask">Delete ' + n + (pl ? ' transaction' : ' transactions') + ' and ' + (pl ? 'its' : 'their') + ' conversations? This cannot be undone. If the bookkeeper’s next sheet still lists ' + (pl ? 'it' : 'them') + ', ' + (pl ? 'it comes' : 'they come') + ' back as new.</span>' +
+        '<button type="button" class="dangerbtn" data-bulk="deleteyes">Delete ' + n + '</button><button type="button" class="plain" data-bulk="deletecancel">Cancel</button></div></div>';
+    }
     if (ui.bulkExplain) {
       return '<div class="bulkbar" role="region" aria-label="Bulk actions"><div class="reasonbox"><label for="bulkReason">Reason for the ' + n + ' selected ' + (n === 1 ? 'item' : 'items') + '</label>' +
         '<input id="bulkReason" type="text" placeholder="e.g. Monthly bank fee, no receipt is issued">' +
@@ -727,7 +744,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     return '<div class="bulkbar" role="region" aria-label="Bulk actions"><span class="bcount">' + n + ' selected</span><div class="bacts">' +
       '<button type="button" class="primary" data-bulk="tojeff">Give to Jeff</button>' +
       '<button type="button" data-bulk="hubdoc">Mark In Hubdoc</button><button type="button" data-bulk="explain">Explain\u2026</button>' +
-      '<button type="button" class="plain" data-bulk="takeback">Take back</button><button type="button" class="plain" data-bulk="clear">Clear</button></div></div>';
+      '<button type="button" class="plain" data-bulk="takeback">Take back</button>' + (state.role === 'client' ? '<button type="button" class="plain" data-bulk="delete">Delete\u2026</button>' : '') + '<button type="button" class="plain" data-bulk="clear">Clear</button></div></div>';
   }
 
   // On phones the request switcher moves into the Filters & sort panel; desktop keeps it in the header.
@@ -907,6 +924,29 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function markReturn() { return markSvg('<path class="g" d="M9 6 L4 11 L9 16"/><path class="g" d="M4 11 H14 a6 6 0 0 1 0 12 H10"/>', 't-jeff'); }
   function markMsg() { return markSvg('<path class="g" d="M4 5 H20 V16 H11 L6 20 V16 H4 Z"/>', 't-jeff'); }
 
+  // A message is "mine" if I wrote it. In the prototype each role is a different person.
+  function isMine(m) { return m.kind === 'message' && !m.removed && (useRemote ? m.author === state.uid : m.role === state.role); }
+  function findMsg(id) {
+    var found = null;
+    Object.keys(state.comments).forEach(function (k) { state.comments[k].forEach(function (m) { if (m.id === id) found = m; }); });
+    return found;
+  }
+  function editMessage(m, body) {
+    if (useRemote) return remote.from('comments').update({ body: body }).eq('id', m.id).then(function (r) { if (r.error) throw r.error; return loadRemote(); });
+    m.body = body; m.edited = true; save(); return Promise.resolve();
+  }
+  function removeMessage(m) {
+    if (useRemote) return remote.from('comments').update({ removed: true }).eq('id', m.id).then(function (r) { if (r.error) throw r.error; return loadRemote(); });
+    m.removed = true; m.body = 'Message removed'; m.edited = true; save(); return Promise.resolve();
+  }
+  function deleteItems(ids) {
+    if (useRemote) return remote.from('items').delete().in('id', ids).then(function (r) { if (r.error) throw r.error; return loadRemote(); });
+    var gone = state.items.filter(function (i) { return ids.indexOf(i.id) > -1; });
+    state.items = state.items.filter(function (i) { return ids.indexOf(i.id) < 0; });
+    gone.forEach(function (i) { if (!state.items.some(function (x) { return x.fp === i.fp; })) delete state.comments[i.fp]; });
+    save(); return Promise.resolve();
+  }
+
   function addComment(it, role, kind, body) {
     var list = state.comments[it.fp] = state.comments[it.fp] || [];
     list.push({ id: 'c' + Date.now() + list.length, role: role, kind: kind, body: body, at: new Date().toISOString() });
@@ -952,7 +992,21 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var list = msgs(it);
     var items = list.length ? list.map(function (m) {
       var tag = m.kind === 'reopen' ? '<span class="mtag">Sent back</span>' : m.kind === 'accept' ? '<span class="mtag ok">Accepted</span>' : '';
-      return '<li class="msg ' + esc(m.kind) + '"><div class="mhd"><b>' + esc(ROLE_LABEL[m.role] || m.role) + '</b> ' + tag + '<time datetime="' + esc(m.at) + '">' + esc(fmtTime(m.at)) + '</time></div><p>' + (m.kind === 'accept' ? '' : esc(m.body)) + '</p></li>';
+      var when = '<time datetime="' + esc(m.at) + '">' + esc(fmtTime(m.at)) + '</time>' + (m.edited && !m.removed ? '<span class="edited">edited</span>' : '');
+      var head = '<div class="mhd"><b>' + esc(ROLE_LABEL[m.role] || m.role) + '</b> ' + tag + when + '</div>';
+      if (m.removed) return '<li class="msg gone">' + head + '<p class="removed">Message removed</p></li>';
+      if (ui.editMsg === m.id) {
+        return '<li class="msg editing">' + head + '<label class="sr" for="editBody">Edit your message</label><textarea id="editBody" maxlength="1000" rows="3">' + esc(m.body) + '</textarea>' +
+          (ui.threadErr ? '<span class="err" role="alert">' + esc(ui.threadErr) + '</span>' : '') +
+          '<div class="acts"><button type="button" class="btn small primary" data-msg="save:' + esc(m.id) + '">Save</button><button type="button" class="btn small" data-msg="cancel">Cancel</button></div></li>';
+      }
+      var mine = '';
+      if (isMine(m) && !pastView()) {
+        mine = ui.removeMsg === m.id
+          ? '<div class="macts"><span class="ask">Remove this message?</span> <button type="button" class="btn small danger" data-msg="remove:' + esc(m.id) + '">Remove</button> <button type="button" class="btn small" data-msg="cancel">Cancel</button></div>'
+          : '<div class="macts"><button type="button" class="link" data-msg="edit:' + esc(m.id) + '">Edit</button><button type="button" class="link" data-msg="ask:' + esc(m.id) + '">Remove</button></div>';
+      }
+      return '<li class="msg ' + esc(m.kind) + '">' + head + '<p>' + (m.kind === 'accept' ? '' : esc(m.body)) + '</p>' + mine + '</li>';
     }).join('') : '<li class="msg none">No messages yet.</li>';
     var draft = (ui.draft && ui.draft[it.id]) || '';
     var review = '';
@@ -1278,7 +1332,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (its.error) return fail(its.error, 'Could not load items.');
     var cm = await remote.from('comments').select('*').order('created_at');
     state.comments = {};
-    if (!cm.error) cm.data.forEach(function (c) { (state.comments[c.fingerprint] = state.comments[c.fingerprint] || []).push({ id: c.id, role: c.role, kind: c.kind, body: c.body, at: c.created_at }); });
+    if (!cm.error) cm.data.forEach(function (c) { (state.comments[c.fingerprint] = state.comments[c.fingerprint] || []).push({ id: c.id, role: c.role, kind: c.kind, body: c.body, at: c.created_at, author: c.author_id, edited: !!c.edited_at, removed: !!c.removed }); });
     var by = {};
     its.data.forEach(function (r) { (by[r.request_id] = by[r.request_id] || []).push(dbItem(r)); });
     var list = reqs.data.map(function (r) { return { id: r.id, name: r.name, importedAt: String(r.imported_at).slice(0, 10), items: by[r.id] || [] }; });
@@ -1387,6 +1441,26 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       if (ti) { seen[seenKey(ti)] = new Date().toISOString(); saveSeen(); }
       render('#threadBody'); return;
     }
+    if (d.msg) {
+      var mp = d.msg.split(':'), mk = mp[0], mid = mp[1];
+      if (mk === 'cancel') { ui.editMsg = null; ui.removeMsg = null; ui.threadErr = ''; render(); return; }
+      if (mk === 'edit') { ui.editMsg = mid; ui.removeMsg = null; ui.threadErr = ''; render('#editBody'); return; }
+      if (mk === 'ask') { ui.removeMsg = mid; ui.editMsg = null; render('[data-msg="remove:' + mid + '"]'); return; }
+      var mo = findMsg(mid); if (!mo) return;
+      if (mk === 'save') {
+        var nb = ((document.getElementById('editBody') || {}).value || '').trim();
+        if (!nb) { ui.threadErr = 'A message cannot be empty. Remove it instead.'; render('#editBody'); return; }
+        if (nb === mo.body) { ui.editMsg = null; ui.threadErr = ''; render(); return; }
+        editMessage(mo, nb).then(function () { ui.editMsg = null; ui.threadErr = ''; announce('Message updated.'); render(); })
+          .catch(function (err) { ui.threadErr = 'Could not save' + (err && err.message ? ' (' + err.message + ')' : '') + '.'; render('#editBody'); });
+        return;
+      }
+      if (mk === 'remove') {
+        removeMessage(mo).then(function () { ui.removeMsg = null; announce('Message removed.'); render(); })
+          .catch(function (err) { ui.removeMsg = null; ui.error = 'Could not remove the message' + (err && err.message ? ' (' + err.message + ')' : '') + '.'; render(); });
+        return;
+      }
+    }
     if (d.act === 'closethread') { var was = ui.threadFor; ui.threadFor = null; ui.threadErr = ''; render('[data-thread="' + was + '"]'); return; }
     if (d.review) {
       var rp = d.review.split(':'), rk = rp[0], rid = rp[1], rit = viewItems().find(function (x) { return x.id === rid; });
@@ -1457,7 +1531,15 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     }
     if (d.bulk) {
       var kind = d.bulk;
-      if (kind === 'clear') { ui.sel = {}; ui.bulkExplain = false; ui.notice = ''; render(); return; }
+      if (kind === 'clear') { ui.sel = {}; ui.bulkExplain = false; ui.bulkDelete = false; ui.notice = ''; render(); return; }
+      if (kind === 'delete') { ui.bulkDelete = true; render('[data-bulk="deletecancel"]'); return; }
+      if (kind === 'deletecancel') { ui.bulkDelete = false; render(); return; }
+      if (kind === 'deleteyes') {
+        var delIds = selectedItems().map(function (i) { return i.id; }), delN = delIds.length;
+        deleteItems(delIds).then(function () { ui.sel = {}; ui.bulkDelete = false; ui.threadFor = null; announce('Deleted ' + delN + (delN === 1 ? ' transaction.' : ' transactions.')); render(); })
+          .catch(function (err) { ui.bulkDelete = false; ui.error = 'Could not delete' + (err && err.message ? ' (' + err.message + ')' : '') + '.'; render(); });
+        return;
+      }
       if (kind === 'explain') { ui.bulkExplain = true; ui.bulkErr = false; render('#bulkReason'); return; }
       if (kind === 'explaincancel') { ui.bulkExplain = false; ui.bulkErr = false; render(); return; }
       if (kind === 'explainsave') {

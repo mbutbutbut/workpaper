@@ -112,6 +112,16 @@ do $$ begin
 exception when others then
   insert into results values ('jeff cannot send an item back', 'blocked', 'blocked');
 end $$;
+do $$ declare n int; begin
+  update comments set body = 'changed by jeff' where fingerprint = 'rolecheck-2' and role = 'client';
+  get diagnostics n = row_count;
+  insert into results values ('jeff cannot edit someone else''s message', '0', n::text);
+end $$;
+do $$ declare n int; begin
+  delete from items where fingerprint = 'rolecheck-2';
+  get diagnostics n = row_count;
+  insert into results values ('jeff cannot delete items', '0', n::text);
+end $$;
 reset role;
 
 -- ---------- BOOKKEEPER: reads everything; reviews; changes nothing else ----------
@@ -221,6 +231,44 @@ do $$ begin
 exception when others then
   insert into results values ('the client can reply', 'allowed', 'BLOCKED');
 end $$;
+do $$ declare n int; e text; begin
+  update comments set body = 'Attached the corrected invoice' where fingerprint = 'rolecheck-3' and author_id = auth.uid() and kind = 'message';
+  get diagnostics n = row_count;
+  select (edited_at is not null)::text into e from comments where fingerprint = 'rolecheck-3' and author_id = auth.uid();
+  insert into results values ('the client can edit their own message (and it is stamped)', '1/true', n::text || '/' || e);
+end $$;
+do $$ declare n int; begin
+  update comments set body = 'not yours' where fingerprint = 'rolecheck-3' and role = 'bookkeeper' and kind = 'message';
+  get diagnostics n = row_count;
+  insert into results values ('the client cannot edit someone else''s message', '0', n::text);
+end $$;
+do $$ declare n int; begin
+  update comments set body = 'rewritten' where fingerprint = 'rolecheck-3' and kind in ('accept', 'reopen');
+  get diagnostics n = row_count;
+  insert into results values ('nobody can edit the automatic accept and send-back entries', '0', n::text);
+end $$;
+do $$ begin
+  update comments set role = 'bookkeeper' where fingerprint = 'rolecheck-3' and author_id = auth.uid();
+  insert into results values ('a message cannot change who wrote it', 'blocked', 'ALLOWED');
+exception when others then
+  insert into results values ('a message cannot change who wrote it', 'blocked', 'blocked');
+end $$;
+do $$ declare n int; b text; begin
+  update comments set removed = true where fingerprint = 'rolecheck-3' and author_id = auth.uid() and kind = 'message';
+  get diagnostics n = row_count;
+  select body into b from comments where fingerprint = 'rolecheck-3' and author_id = auth.uid();
+  insert into results values ('the client can remove their own message (text is erased)', '1/Message removed', n::text || '/' || b);
+end $$;
+do $$ declare n int; begin
+  update comments set body = 'bring it back' where fingerprint = 'rolecheck-3' and author_id = auth.uid();
+  get diagnostics n = row_count;
+  insert into results values ('a removed message cannot be edited again', '0', n::text);
+end $$;
+do $$ declare n int; begin
+  delete from items where fingerprint = 'rolecheck-3';
+  get diagnostics n = row_count;
+  insert into results values ('the client can delete a transaction', '1', n::text);
+end $$;
 reset role;
 
 -- ---------- NOT SIGNED IN: nothing ----------
@@ -241,6 +289,7 @@ end $$;
 reset role;
 
 -- ---------- clean up, then show the answer ----------
+insert into results select 'deleting a transaction deletes its conversation', '0', count(*)::text from comments where fingerprint = 'rolecheck-3';
 delete from comments where fingerprint like 'rolecheck-%';
 delete from requests where id = '00000000-0000-0000-0000-0000000000a1';
 select check_name,
