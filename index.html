@@ -185,6 +185,27 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .jacts button[aria-pressed="true"] .tick { color: var(--paper); }
 .jrow .note-in { min-height: 40px; }
 
+/* selection + bulk actions */
+.row.cl { grid-template-columns: 30px 40px minmax(0, 1.9fr) 92px 96px minmax(0, 1.1fr) 92px 52px minmax(0, 1.7fr); }
+.sel { display: grid; place-items: start center; padding: 6px 0; margin: -8px 0; cursor: pointer; }
+.sel input, .mcheck input { width: 20px; height: 20px; margin: 0; accent-color: var(--ink); cursor: pointer; }
+.mcheck { display: inline-flex; align-items: center; padding: 8px 10px 8px 0; margin: -8px 0; cursor: pointer; }
+.mhead .mleft { display: inline-flex; align-items: baseline; gap: 4px; }
+.row.selected { background-color: var(--blue-wash); }
+.row.selected.flag { background-color: var(--red-wash); }
+.bulkbar { position: sticky; top: 0; z-index: 15; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; background: var(--ink); color: var(--paper); padding: 10px 14px; margin: 8px 0; border-radius: 3px; box-shadow: 0 8px 16px -10px rgba(31, 41, 51, .55); }
+.bulkbar .bcount { font-weight: 600; }
+.bulkbar .bacts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bulkbar button { min-height: 40px; padding: 6px 14px; border: 1.5px solid var(--paper); background: transparent; color: var(--paper); border-radius: 3px; font-weight: 600; }
+.bulkbar button:hover { background: rgba(234, 241, 226, .16); }
+.bulkbar button.plain { border-color: transparent; text-decoration: underline; text-underline-offset: 3px; }
+.bulkbar :focus-visible { outline-color: var(--paper); }
+.bulkbar .reasonbox { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1 1 320px; }
+.bulkbar .reasonbox label { font-weight: 600; }
+.bulkbar .reasonbox input { flex: 1 1 240px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--paper); border-radius: 3px; background: #fff; color: var(--ink); }
+.bulkbar .rerr { color: #ffd9d4; font-weight: 500; width: 100%; }
+.notice { margin: 8px 0; padding: 10px 14px; background: var(--blue-wash); border: 1px solid var(--blue); border-radius: 3px; font-weight: 500; }
+
 /* sortable headers */
 .hsort { display: inline-flex; align-items: baseline; gap: 4px; padding: 6px 0; margin: -6px 0; border: 0; background: none; font: inherit; line-height: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; }
 .hsort:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
@@ -233,6 +254,19 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 @media (max-width: 760px) {
   .row { grid-template-columns: 34px minmax(0, 1fr) 44px; gap: 4px 10px; }
   .row .cell { display: none; }
+  .bulkbar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 10px; }
+  .bulkbar .bacts { display: contents; }
+  .bulkbar .bcount { grid-column: 1 / 3; grid-row: 1; align-self: center; }
+  .bulkbar button.plain { grid-column: 3; grid-row: 1; justify-self: end; min-height: 32px; padding: 2px 4px; }
+  .bulkbar button { font-size: 14px; padding: 4px 8px; line-height: 1.2; }
+  .bulkbar .reasonbox { grid-column: 1 / -1; }
+  .row.cl { grid-template-columns: 28px 28px minmax(0, 1fr) 44px; }
+  .row.cl .sel { grid-column: 1; grid-row: 1; }
+  .row.cl .no { grid-column: 2; grid-row: 1; }
+  .row.cl .descc { grid-column: 3; grid-row: 1; }
+  .row.cl .tick-cell { grid-column: 4; grid-row: 1; }
+  .row.cl .owner, .row.cl .ownertxt { grid-column: 3 / 5; grid-row: 2; }
+  .row.cl .notec { grid-column: 3 / 5; grid-row: 3; }
   .row .descc .meta { display: block; }
   .row.head { display: none; }
   .row .no { grid-row: 1; grid-column: 1; }
@@ -255,6 +289,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 </head>
 <body>
 <div id="app"></div>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
 
 <script>
 (function () {
@@ -335,7 +370,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   var remote = (CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase) ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey) : null;
   var state = remote ? { items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || { items: sample(), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null };
   if (!state.history) state.history = [];
-  var ui = { col: null, loading: !!remote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
+  var ui = { sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: !!remote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function save() { if (remote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -448,13 +483,35 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       ORDER.map(function (k) { return '<li>' + glyph(k) + STATUS[k].label + '</li>'; }).join('') + '</ul></footer>';
   }
 
+  function shownItems() { return sorted(filtered(viewItems())); }
+  function selectAllBtn() {
+    var shown = shownItems();
+    var all = shown.length && shown.every(function (i) { return ui.sel[i.id]; });
+    return '<button type="button" class="btn small" data-act="selall">' + (all ? 'Clear selection' : 'Select all shown') + '</button>';
+  }
+  function selectedItems() { return state.items.filter(function (i) { return ui.sel[i.id]; }); }
+  function bulkBar() {
+    var n = selectedItems().length;
+    if (!n) return ui.notice ? '<div class="notice" role="status">' + esc(ui.notice) + '</div>' : '';
+    if (ui.bulkExplain) {
+      return '<div class="bulkbar" role="region" aria-label="Bulk actions"><div class="reasonbox"><label for="bulkReason">Reason for the ' + n + ' selected ' + (n === 1 ? 'item' : 'items') + '</label>' +
+        '<input id="bulkReason" type="text" placeholder="e.g. Monthly bank fee, no receipt is issued">' +
+        (ui.bulkErr ? '<span class="rerr" role="alert">Add a short reason so the bookkeeper knows.</span>' : '') +
+        '<button type="button" data-bulk="explainsave">Save</button><button type="button" class="plain" data-bulk="explaincancel">Cancel</button></div></div>';
+    }
+    return '<div class="bulkbar" role="region" aria-label="Bulk actions"><span class="bcount">' + n + ' selected</span><div class="bacts">' +
+      '<button type="button" data-bulk="tojeff">Give to Jeff</button><button type="button" data-bulk="takeback">Take back</button>' +
+      '<button type="button" data-bulk="hubdoc">Mark In Hubdoc</button><button type="button" data-bulk="explain">Explain\u2026</button>' +
+      '<button type="button" class="plain" data-bulk="clear">Clear</button></div></div>';
+  }
+
   function toolbar(showJeffTab) {
     var tabs = [['all', 'All'], ['open', 'Open']];
     if (showJeffTab) tabs.push(['jeff', 'With Jeff']);
     tabs.push(['done', 'Done']);
     return '<div class="toolbar"><div class="tabs" role="group" aria-label="Filter">' +
       tabs.map(function (t) { return '<button type="button" data-filter="' + t[0] + '" aria-pressed="' + (ui.filter === t[0]) + '">' + t[1] + '</button>'; }).join('') +
-      '</div><label class="sortlbl">Order <span class="seg" role="group" aria-label="Order">' +
+      '</div>' + (showJeffTab ? selectAllBtn() : '') + '<label class="sortlbl">Order <span class="seg" role="group" aria-label="Order">' +
       '<button type="button" data-sort="number" aria-pressed="' + (ui.sort === 'number') + '">By number</button>' +
       '<button type="button" data-sort="open" aria-pressed="' + (ui.sort === 'open') + '">Open first</button></span></label></div>';
   }
@@ -529,7 +586,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
   function rowHTML(item, mode) {
     var done = !STATUS[item.status].open && item.status !== 'missing';
-    var cls = 'row' + (done ? ' done' : '') + (item.status === 'missing' ? ' flag' : '') + (mode === 'bk' ? ' bk' : '');
+    var cls = 'row' + (done ? ' done' : '') + (item.status === 'missing' ? ' flag' : '') + (mode === 'bk' ? ' bk' : '') + (mode === 'client' ? ' cl' + (ui.sel[item.id] ? ' selected' : '') : '');
     var meta = esc(item.date) + (item.amount ? ' · <span class="num">' + money(item.amount) + '</span>' : '') + (item.source ? ' · ' + esc(item.source) : '');
     var owner;
     if (mode === 'client') {
@@ -543,7 +600,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     } else {
       note = '<div class="notec note">' + esc(item.note) + '</div>';
     }
-    return '<div class="' + cls + '"><div class="no num">' + item.no + '</div>' +
+    var selCell = mode === 'client' ? '<label class="sel"><input type="checkbox" data-sel="' + item.id + '"' + (ui.sel[item.id] ? ' checked' : '') + '><span class="sr">Select item ' + item.no + '</span></label>' : '';
+    return '<div class="' + cls + '">' + selCell + '<div class="no num">' + item.no + '</div>' +
       '<div class="descc"><span class="desc">' + esc(item.desc) + '</span><span class="meta">' + meta + '</span></div>' +
       '<div class="cell cell-d num">' + (esc(item.date) || '\u2014') + '</div>' +
       '<div class="cell cell-a">' + (money(item.amount) || '\u2014') + '</div>' +
@@ -565,7 +623,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       var state = on ? (dir === -1 ? 'sorted ' + (key === 'amount' ? 'largest first' : 'newest first') : 'sorted ' + (key === 'amount' ? 'smallest first' : 'oldest first')) : 'sorted in the default order';
       return '<button type="button" class="hsort' + (on ? ' on' : '') + '" data-col="' + key + '" aria-label="' + label + ', ' + state + '. Activate to change.">' + label + tri + '</button>';
     }
-    var headRow = '<div class="row head' + (mode === 'bk' ? ' bk' : '') + '"><div>No.</div><div>Item</div><div>' + sortBtn('date', 'Date') + '</div><div class="cell-a">' + sortBtn('amount', 'Amount') + '</div><div>Account</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
+    var headRow = '<div class="row head' + (mode === 'bk' ? ' bk' : ' cl') + '">' + (mode === 'client' ? '<div></div>' : '') + '<div>No.</div><div>Item</div><div>' + sortBtn('date', 'Date') + '</div><div class="cell-a">' + sortBtn('amount', 'Amount') + '</div><div>Account</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
     return '<div class="ledger">' + groups.map(function (g) {
       var open = g.items.filter(function (i) { return i.status === 'waiting' || i.status === 'jeff'; }).length;
       var flag = g.items.filter(function (i) { return i.status === 'missing'; }).length;
@@ -574,7 +632,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         '<span>' + glyph('waiting') + open + ' open</span>' +
         (flag ? '<span>' + glyph('missing') + flag + ' can’t find</span>' : '') +
         '<span>' + glyph('hubdoc') + done + ' done</span></span>';
-      return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead"><h2>' + esc(monthLabel(g.key)) + '</h2>' + count + '</div>' + headRow +
+      var nSel = g.items.filter(function (i) { return ui.sel[i.id]; }).length;
+      var mcheck = mode === 'client' ? '<label class="mcheck"><input type="checkbox" data-selmonth="' + g.key + '"' + (nSel === g.items.length ? ' checked' : '') + (nSel && nSel < g.items.length ? ' data-partial="1"' : '') + '><span class="sr">Select all items in ' + esc(monthLabel(g.key)) + '</span></label>' : '';
+      return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead"><span class="mleft">' + mcheck + '<h2>' + esc(monthLabel(g.key)) + '</h2></span>' + count + '</div>' + headRow +
         g.items.map(function (i) { return rowHTML(i, mode); }).join('') + '</section>';
     }).join('') + '</div>';
   }
@@ -600,7 +660,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (!hasItems) {
       body = '<div class="empty"><h2>No request yet</h2><p>Import the spreadsheet your bookkeeper emailed. Each row becomes an item you can tick off, note, or pass to Jeff.</p><button type="button" class="btn primary" data-act="openimport">Import request</button></div>';
     } else {
-      body = pastBar() + tally() + toolbar(!past) + ledger(sorted(filtered(items)), past ? 'bk' : 'client');
+      var shownIds = {}; shownItems().forEach(function (i) { shownIds[i.id] = 1; });
+      Object.keys(ui.sel).forEach(function (k) { if (!shownIds[k] || past) delete ui.sel[k]; });
+      body = pastBar() + tally() + (past ? '' : bulkBar()) + toolbar(!past) + ledger(sorted(filtered(items)), past ? 'bk' : 'client');
     }
     return strip() + '<main id="main">' + head + (ui.importOpen ? importPanel() : '') + body + '</main>' + (hasItems ? legend() : '');
   }
@@ -660,6 +722,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     else if (state.role === 'bookkeeper') app.innerHTML = renderBookkeeper();
     else app.innerHTML = renderClient();
     ui.drawId = null;
+    app.querySelectorAll('input[data-partial]').forEach(function (i) { i.indeterminate = true; });
     window.scrollTo(0, scroll);
     if (focusSel) { var el = app.querySelector(focusSel); if (el) el.focus(); }
   }
@@ -802,6 +865,33 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     remote.from('items').update(fields).eq('id', it.id).then(function (r) { if (r.error) { fail(r.error, 'Your change was not saved.'); scheduleReload(); } });
   }
 
+  function pushMany(ids, fields) {
+    if (!remote || !ids.length) return;
+    remote.from('items').update(fields).in('id', ids).then(function (r) { if (r.error) { fail(r.error, 'Your change was not saved.'); scheduleReload(); } });
+  }
+  function announce(text) { ui.notice = text; var l = document.getElementById('live'); if (l) l.textContent = text; }
+  function runBulk(kind, reason) {
+    var items = selectedItems(), n = items.length, ids = items.map(function (i) { return i.id; }), msg = '';
+    if (kind === 'tojeff') {
+      items.forEach(function (i) { i.owner = 'jeff'; i.status = 'jeff'; });
+      pushMany(ids, { owner: 'jeff', status: 'jeff' }); msg = 'Gave ' + n + (n === 1 ? ' item' : ' items') + ' to Jeff.';
+    } else if (kind === 'takeback') {
+      var back = items.filter(function (i) { return i.status === 'jeff'; }).map(function (i) { return i.id; });
+      items.forEach(function (i) { i.owner = 'me'; if (i.status === 'jeff') i.status = 'waiting'; });
+      pushMany(back, { owner: 'me', status: 'waiting' }); pushMany(ids.filter(function (x) { return back.indexOf(x) < 0; }), { owner: 'me' });
+      msg = 'Took back ' + n + (n === 1 ? ' item' : ' items') + '.';
+    } else if (kind === 'hubdoc') {
+      items.forEach(function (i) { i.status = 'hubdoc'; });
+      pushMany(ids, { status: 'hubdoc' }); msg = 'Marked ' + n + (n === 1 ? ' item' : ' items') + ' In Hubdoc.';
+    } else if (kind === 'explain') {
+      var blank = [], kept = 0;
+      items.forEach(function (i) { i.status = 'explained'; if (!i.note) { i.note = reason; blank.push(i.id); } else kept++; });
+      pushMany(ids, { status: 'explained' }); pushMany(blank, { note: reason });
+      msg = 'Explained ' + n + (n === 1 ? ' item' : ' items') + '.' + (kept ? ' ' + kept + (kept === 1 ? ' kept its' : ' kept their') + ' existing note.' : '');
+    }
+    ui.sel = {}; ui.bulkExplain = false; ui.bulkErr = false; announce(msg); save();
+  }
+
   async function pushImport(plan, name) {
     var r = await remote.from('requests').insert({ name: name }).select().single();
     if (r.error) return fail(r.error, 'Could not create the request.');
@@ -833,7 +923,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (!t) { if (ui.menuFor) { ui.menuFor = null; render(); } return; }
     var d = t.dataset;
     if (d.signin) { state.user = ROLE_EMAIL[d.signin]; state.role = d.signin; save(); render('#main'); return; }
-    if (d.role) { state.role = d.role; state.user = ROLE_EMAIL[d.role]; ui.menuFor = null; ui.filter = 'all'; ui.sort = d.role === 'bookkeeper' ? 'open' : 'number'; save(); render(); return; }
+    if (d.role) { ui.sel = {}; ui.notice = ''; state.role = d.role; state.user = ROLE_EMAIL[d.role]; ui.menuFor = null; ui.filter = 'all'; ui.sort = d.role === 'bookkeeper' ? 'open' : 'number'; save(); render(); return; }
     if (d.act === 'dismisserr') { ui.error = ''; render(); return; }
     if (d.act === 'signout' && remote) { remote.auth.signOut().then(function () { state.user = null; state.role = null; ui.sent = false; render(); }); return; }
     if (d.act === 'signout') { state.user = null; state.role = null; ui.sent = false; save(); render(); return; }
@@ -852,6 +942,23 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       if (state.items.length) state.history.unshift({ id: 'h' + Date.now(), name: state.cycle, importedAt: state.importedAt || new Date().toISOString().slice(0, 10), items: state.items });
       state.items = ui.pending.items; state.cycle = nm; state.sample = false; state.importedAt = new Date().toISOString().slice(0, 10);
       ui.pending = null; ui.importOpen = false; ui.importMsg = null; ui.filter = 'all'; ui.viewId = null; save(); render('#main'); return;
+    }
+    if (d.act === 'selall') {
+      var shown = shownItems(), all = shown.length && shown.every(function (i) { return ui.sel[i.id]; });
+      ui.sel = {}; if (!all) shown.forEach(function (i) { ui.sel[i.id] = 1; });
+      ui.notice = ''; ui.bulkExplain = false; render('[data-act="selall"]'); return;
+    }
+    if (d.bulk) {
+      var kind = d.bulk;
+      if (kind === 'clear') { ui.sel = {}; ui.bulkExplain = false; ui.notice = ''; render(); return; }
+      if (kind === 'explain') { ui.bulkExplain = true; ui.bulkErr = false; render('#bulkReason'); return; }
+      if (kind === 'explaincancel') { ui.bulkExplain = false; ui.bulkErr = false; render(); return; }
+      if (kind === 'explainsave') {
+        var why = ((document.getElementById('bulkReason') || {}).value || '').trim();
+        if (!why) { ui.bulkErr = true; render('#bulkReason'); return; }
+        runBulk('explain', why); render(); return;
+      }
+      runBulk(kind); render(); return;
     }
     if (d.col) {
       var c = ui.col, k = d.col;
@@ -882,6 +989,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
   app.addEventListener('change', function (e) {
     var t = e.target;
+    if (t.dataset.sel) { if (t.checked) ui.sel[t.dataset.sel] = 1; else delete ui.sel[t.dataset.sel]; ui.notice = ''; render('[data-sel="' + t.dataset.sel + '"]'); return; }
+    if (t.dataset.selmonth) {
+      shownItems().filter(function (i) { return String(monthKey(i)) === t.dataset.selmonth; }).forEach(function (i) { if (t.checked) ui.sel[i.id] = 1; else delete ui.sel[i.id]; });
+      ui.notice = ''; render('[data-selmonth="' + t.dataset.selmonth + '"]'); return;
+    }
     if (t.dataset.owner) {
       var it = state.items.find(function (x) { return x.id === t.dataset.owner; });
       it.owner = t.value;
@@ -894,7 +1006,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       var n = state.items.find(function (x) { return x.id === t.dataset.note; });
       n.note = t.value; save(); pushItem(n, { note: t.value }); return;
     }
-    if (t.id === 'histSel') { ui.viewId = t.value || null; ui.filter = 'all'; render('#histSel'); return; }
+    if (t.id === 'histSel') { ui.sel = {}; ui.notice = ''; ui.viewId = t.value || null; ui.filter = 'all'; render('#histSel'); return; }
     if (t.id === 'csvFile' && t.files[0]) {
       var f = t.files[0], fr = new FileReader();
       if (/\.(xlsx|xls)$/i.test(f.name)) {
