@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Delegated: the user left the choice to Claude. User login is required, so a backend with authentication and a database is needed; a static-only front end is no longer enough. The specific stack is still to be chosen and recorded here when decided.
+A static single-page front end (`index.html`) hosted on Vercel, with Supabase for sign-in (emailed one-time links, no open signups) and Postgres data, and role rules enforced in the database (`supabase/schema.sql`). With `config.js` empty the app runs as a local prototype with sample data.
 
 ## Users
 
@@ -32,9 +32,9 @@ Bookkeeping runs on recurring cycles (month-end, quarter-end, tax season). Reque
 
 ## Capabilities and Constraints
 
-- Confirmed: import the bookkeeper's spreadsheet as checklist items; per-item status and a short note; assign items to Jeff; Jeff has his own filtered list and updates his own statuses; bookkeeper has a live shared view; user login for all roles.
+- Confirmed: admins manage people in the app (add, change role, reset password, remove); everyone signs in with email and password and can change their own; import the bookkeeper's spreadsheet as checklist items; per-item status and a short note; assign items to Jeff; Jeff has his own filtered list and updates his own statuses; bookkeeper has a live shared view; user login for all roles.
 - Documents stay in Hubdoc. The product stores no files.
-- Proposed statuses (unconfirmed): Waiting on me, In Hubdoc, With Jeff, Can't find, Explained (no document exists, with a reason).
+- Statuses: Waiting on me, In Hubdoc, With Jeff, No document (red flag, always with a note; set by Jeff or the client), Explained (the client has accepted the reason and closed the item).
 - Undecided: authentication method, stack, exact import format, whether the bookkeeper can reply or reopen items, reminders (out of scope for v1).
 
 ## Evidence on Hand

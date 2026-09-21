@@ -12,9 +12,18 @@ Nothing here stores documents; those stay in Hubdoc.
 
 ## 2. Set up sign-in
 
-1. **Authentication > Providers > Email**: keep Email enabled. Turn **off** "Allow new users to sign up" (only people you add can sign in).
-2. **Authentication > URL Configuration**: set Site URL to your Vercel address once you have it (step 4). While testing, `http://localhost:8000` works.
-3. **Authentication > Users > Add user > Send invitation** (or "Create new user"): add yourself, Jeff, and the bookkeeper by email.
+People sign in with their email and a password, so no email service is needed.
+
+1. **Authentication > Sign In / Providers**: keep Email enabled. Turn **off** "Allow new users to sign up" (only people you add can sign in). In the Email settings, set the minimum password length to 10.
+2. **Authentication > URL Configuration**: set Site URL to your Vercel address, and add `<your address>/**` under Redirect URLs.
+3. **Authentication > Users > Add user > Create new user**: add yourself, Jeff, and the bookkeeper. Type each person's email and a first password, and tick **Auto Confirm User**. Do not use "Send invitation".
+4. Give each person their first password directly. They can change it themselves inside the app (Account, top right).
+
+**If someone forgets their password**, reset it in the SQL editor (then tell them the new one):
+
+```sql
+update auth.users set encrypted_password = crypt('NewPassword123', gen_salt('bf')) where email = 'person@example.com';
+```
 
 ## 3. Give each person a role
 
@@ -31,9 +40,23 @@ Someone with no row in `members` is signed out with a "not set up" message, even
 
 Deploy this folder as a static site (no build step). `.vercelignore` keeps the design notes out of the upload. Then set the Supabase Site URL (step 2.2) to the Vercel address.
 
+## 4b. Turn on the Team screen (managing people inside the app)
+
+Admins can add, edit and remove people from the app (top right: **Team**). This runs a small function on Vercel (`api/team.js`) that holds Supabase's secret key, so the key never reaches anyone's browser.
+
+1. In Supabase, open **Project Settings > API Keys** and copy the **secret key** (starts with `sb_secret_`). Keep it private.
+2. In Vercel, open your project, then **Settings > Environment Variables**, and add two variables (mark both **Sensitive**):
+   - `SUPABASE_URL` set to your project URL (the same value as `supabaseUrl` in `config.js`)
+   - `SUPABASE_SECRET_KEY` set to the secret key
+3. **Redeploy** (Deployments > the latest one > Redeploy), because new variables only apply to new deployments.
+
+Roles are shown as **Admin**, **Bookkeeper** and **Team member** (the database names are `client`, `bookkeeper` and `jeff`). Only an admin can use the Team screen, and the function checks that on every request. You cannot remove or change yourself, and there must always be one admin.
+
 ## 5. Check the rules
 
-Sign in as each person and confirm:
+Paste `supabase/role-check.sql` into the SQL editor and run it. It acts as each person in turn, using the same database rules the app uses, then shows a PASS/FAIL table. Every row must say PASS, and it deletes its own test data.
+
+Then confirm in the real app, signed in as each person:
 - Jeff sees only his items and can change only status and note.
 - The bookkeeper sees everything and can change nothing.
 - You can import, reassign and edit.
