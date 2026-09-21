@@ -231,6 +231,10 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 /* jeff: plain words, reasons, no reflow */
 .jrow.resolved .jdesc { color: var(--ink-soft); }
 .jrow .jstate { font-weight: 600; }
+.jecho { color: var(--ink-soft); font-size: 14px; }
+.jlegend { list-style: none; margin: 28px 0 0; padding: 12px 0 0; border-top: 3px double var(--rule-strong); display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; }
+.jlegend li { display: inline-flex; align-items: center; gap: 7px; }
+.jlegend .tick { width: 18px; height: 18px; }
 .jrow .jchange { justify-self: start; }
 .reason { border: 1.5px solid var(--ink); padding: 12px; border-radius: 3px; background: #fff; display: grid; gap: 8px; }
 .reason label { font-weight: 600; }
@@ -252,6 +256,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .review ul { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 4px; }
 .review li { display: flex; gap: 10px; align-items: center; }
 .review li svg { width: 20px; height: 20px; flex: none; }
+.mark { color: var(--ink-soft); }
+.mark.warn { color: var(--red); }
 .review label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; }
 .review input[type=text] { width: min(420px, 100%); border: 1px solid var(--ink); background: #fff; padding: 8px 10px; border-radius: 3px; min-height: 40px; margin-bottom: 12px; }
 .new-badge { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); border: 1px solid var(--blue); padding: 0 6px; border-radius: 2px; vertical-align: 2px; }
@@ -314,6 +320,18 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     explained: { label: 'Explained',     short: 'Explained', cls: 't-explained', open: false, path: '<path class="g" d="M5 9 H19 M5 15 H19" pathLength="1"/>' }
   };
   var ORDER = ['waiting', 'hubdoc', 'jeff', 'missing', 'explained'];
+
+  // Status words per role. The glyph never changes; only the wording follows who is reading.
+  function roleLabel(k) {
+    if (state.role === 'bookkeeper' && k === 'waiting') return 'Waiting on client';
+    return STATUS[k].label;
+  }
+  // Neutral markers for the import review, so status glyphs keep one meaning.
+  function mark(kind) {
+    return kind === 'warn'
+      ? '<svg class="mark warn" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 L21 19 H3 Z M12 10 V14 M12 16.5 V17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg>';
+  }
 
   function glyph(key, draw) {
     return '<svg class="tick ' + STATUS[key].cls + (draw && key !== 'waiting' ? ' draw' : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + STATUS[key].path + '</svg>';
@@ -480,6 +498,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function tally() {
     var c = counts();
     var open = c.waiting + c.jeff;
+    if (state.role === 'bookkeeper') {
+      return '<div class="tally" aria-label="Summary">' +
+        '<span>' + glyph('waiting') + '<b class="num">' + c.waiting + '</b> waiting on client</span>' +
+        '<span>' + glyph('jeff') + '<b class="num">' + c.jeff + '</b> with Jeff</span>' +
+        '<span>' + glyph('missing') + '<b class="num">' + c.missing + '</b> can\u2019t find</span>' +
+        '<span>' + glyph('hubdoc') + '<b class="num">' + (c.hubdoc + c.explained) + '</b> done</span></div>';
+    }
     var parts = [
       '<span>' + glyph('waiting') + '<b class="num">' + open + '</b> open</span>',
       '<span>' + glyph('missing') + '<b class="num">' + c.missing + '</b> can’t find</span>',
@@ -490,7 +515,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
   function legend() {
     return '<footer class="legend"><ul aria-label="Tickmark legend"><li class="ttl">Tickmarks</li>' +
-      ORDER.map(function (k) { return '<li>' + glyph(k) + STATUS[k].label + '</li>'; }).join('') + '</ul></footer>';
+      ORDER.map(function (k) { return '<li>' + glyph(k) + roleLabel(k) + '</li>'; }).join('') + '</ul></footer>';
   }
 
   function shownItems() { return sorted(filtered(viewItems())); }
@@ -557,13 +582,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (pd) {
       var st = pd.stats;
       h += '<div class="review warnlist" role="region" aria-label="Import review"><h3>' + st.total + ' rows read</h3><ul>' +
-        '<li>' + glyph('hubdoc') + '<span><b>' + st.carried + '</b> already tracked. Status and notes carry over.</span></li>' +
-        '<li>' + glyph('waiting') + '<span><b>' + st.fresh + '</b> new. These start as waiting on you.</span></li>' +
-        (st.twins ? '<li>' + glyph('missing') + '<span><b>' + st.twins + '</b> ' + (st.twins === 1 ? 'row repeats' : 'rows repeat') + ' an earlier row exactly (same date, amount, description and account). Kept as separate items.</span></li>' : '') +
-        (st.warn && st.warn.noDate ? '<li>' + glyph('missing') + '<span><b>' + st.warn.noDate + '</b> ' + (st.warn.noDate === 1 ? 'row has' : 'rows have') + ' no date. ' + (st.warn.noDate === 1 ? 'It goes' : 'They go') + ' under \u201cNo date\u201d.</span></li>' : '') +
-        (st.warn && st.warn.badAmount ? '<li>' + glyph('missing') + '<span><b>' + st.warn.badAmount + '</b> ' + (st.warn.badAmount === 1 ? 'row has an amount' : 'rows have amounts') + ' that is not a number.</span></li>' : '') +
-        (st.warn && st.warn.noAmount ? '<li>' + glyph('missing') + '<span><b>' + st.warn.noAmount + '</b> ' + (st.warn.noAmount === 1 ? 'row has' : 'rows have') + ' no amount.</span></li>' : '') +
-        (st.dropped ? '<li>' + glyph('explained') + '<span><b>' + st.dropped + '</b> ' + (st.dropped === 1 ? 'item from the current request is' : 'items from the current request are') + ' not in this sheet. Kept in history.</span></li>' : '') +
+        '<li>' + mark() + '<span><b>' + st.carried + '</b> already tracked. Status and notes carry over.</span></li>' +
+        '<li>' + mark() + '<span><b>' + st.fresh + '</b> new. These start as waiting on you.</span></li>' +
+        (st.twins ? '<li>' + mark('warn') + '<span><b>' + st.twins + '</b> ' + (st.twins === 1 ? 'row repeats' : 'rows repeat') + ' an earlier row exactly (same date, amount, description and account). Kept as separate items.</span></li>' : '') +
+        (st.warn && st.warn.noDate ? '<li>' + mark('warn') + '<span><b>' + st.warn.noDate + '</b> ' + (st.warn.noDate === 1 ? 'row has' : 'rows have') + ' no date. ' + (st.warn.noDate === 1 ? 'It goes' : 'They go') + ' under \u201cNo date\u201d.</span></li>' : '') +
+        (st.warn && st.warn.badAmount ? '<li>' + mark('warn') + '<span><b>' + st.warn.badAmount + '</b> ' + (st.warn.badAmount === 1 ? 'row has an amount' : 'rows have amounts') + ' that is not a number.</span></li>' : '') +
+        (st.warn && st.warn.noAmount ? '<li>' + mark('warn') + '<span><b>' + st.warn.noAmount + '</b> ' + (st.warn.noAmount === 1 ? 'row has' : 'rows have') + ' no amount.</span></li>' : '') +
+        (st.dropped ? '<li>' + mark() + '<span><b>' + st.dropped + '</b> ' + (st.dropped === 1 ? 'item from the current request is' : 'items from the current request are') + ' not in this sheet. Kept in history.</span></li>' : '') +
         '</ul>';
       if (pd.preview && pd.preview.length) {
         h += '<table class="preview"><caption class="sr">First rows of the sheet</caption><thead><tr><th>Date</th><th>Item</th><th>Amount</th></tr></thead><tbody>' +
@@ -583,7 +608,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   }
 
   function tickCell(item, editable) {
-    if (!editable) return '<div class="tick-cell" title="' + esc(STATUS[item.status].label) + '">' + glyph(item.status, ui.drawId === item.id) + '<span class="sr">' + esc(STATUS[item.status].label) + '</span></div>';
+    if (!editable) return '<div class="tick-cell" title="' + esc(roleLabel(item.status)) + '">' + glyph(item.status, ui.drawId === item.id) + '<span class="sr">' + esc(roleLabel(item.status)) + '</span></div>';
     var open = ui.menuFor === item.id;
     var h = '<div class="tick-cell"><button type="button" class="tickbtn" data-menu="' + item.id + '" aria-haspopup="menu" aria-expanded="' + open + '" aria-label="Item ' + item.no + ' status: ' + esc(STATUS[item.status].label) + '">' + glyph(item.status, ui.drawId === item.id) + '</button>';
     if (open) {
@@ -642,7 +667,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       var open = g.items.filter(function (i) { return i.status === 'waiting' || i.status === 'jeff'; }).length;
       var flag = g.items.filter(function (i) { return i.status === 'missing'; }).length;
       var done = g.items.length - open - flag;
-      var count = '<span class="mcount">' +
+      var wClient = g.items.filter(function (i) { return i.status === 'waiting'; }).length;
+      var wJeff = g.items.filter(function (i) { return i.status === 'jeff'; }).length;
+      var count = state.role === 'bookkeeper' ? '<span class="mcount">' +
+        '<span>' + glyph('waiting') + wClient + ' on client</span>' +
+        '<span>' + glyph('jeff') + wJeff + ' with Jeff</span>' +
+        (flag ? '<span>' + glyph('missing') + flag + ' can\u2019t find</span>' : '') +
+        '<span>' + glyph('hubdoc') + done + ' done</span></span>' : '<span class="mcount">' +
         '<span>' + glyph('waiting') + open + ' open</span>' +
         (flag ? '<span>' + glyph('missing') + flag + ' can’t find</span>' : '') +
         '<span>' + glyph('hubdoc') + done + ' done</span></span>';
@@ -695,12 +726,14 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function renderJeff() {
     var mine = state.items.filter(function (i) { return i.owner === 'jeff'; }).sort(function (a, b) { return a.no - b.no; });
     var waiting = mine.filter(function (i) { return i.status === 'jeff'; }).length;
-    var head = '<div class="sheet-head"><div><h1>Your list</h1><p>' + (mine.length ? (waiting ? waiting + ' of ' + mine.length + ' items still need you.' : 'All ' + mine.length + ' items are dealt with. Thank you.') : 'Nothing has been passed to you yet.') + '</p></div></div>';
+    var lead = mine.length ? (waiting ? waiting + ' of ' + mine.length + ' items still need you.' : 'All ' + mine.length + ' items are dealt with. Thank you.') : 'Nothing has been passed to you yet.';
+    var hint = waiting ? ' Upload each receipt to Hubdoc first, then tap “I have it”.' : '';
+    var head = '<div class="sheet-head"><div><h1>Your list</h1><p>' + lead + hint + '</p></div></div>';
     var body;
     if (!mine.length) {
       body = '<div class="empty"><h2>Nothing for you yet</h2><p>When the client passes purchases to you, they will show up here.</p></div>';
     } else {
-      body = '<div role="list">' + mine.map(function (i) {
+      body = (ui.notice ? '<div class="notice" role="status">' + esc(ui.notice) + '</div>' : '') + '<div role="list">' + mine.map(function (i) {
         var open = i.status === 'jeff';
         var meta = 'Item ' + i.no + ' · ' + esc(i.date) + (i.amount ? ' · <span class="num">' + money(i.amount) + '</span>' : '');
         var action;
@@ -711,17 +744,20 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
             '<div class="acts"><button type="button" class="btn primary" data-jsave="' + i.id + '">Save</button><button type="button" class="btn" data-jcancel="1">Cancel</button></div></div>';
         } else if (open) {
           action = '<div class="jacts">' +
-            '<button type="button" data-jset="' + i.id + ':hubdoc">' + glyph('hubdoc') + 'Got it</button>' +
+            '<button type="button" data-jset="' + i.id + ':hubdoc">' + glyph('hubdoc') + 'I have it</button>' +
             '<button type="button" data-jset="' + i.id + ':missing">' + glyph('missing') + 'Can’t find</button>' +
             '<button type="button" data-jset="' + i.id + ':explained">' + glyph('explained') + 'No document</button></div>';
         } else {
           action = '<button type="button" class="btn small jchange" data-jchange="' + i.id + '">Change</button>';
         }
+        var echo = (i.status === 'explained' && i.note) ? '<div class="jecho">Your reason: ' + esc(i.note) + '</div>' : '';
         return '<div class="jrow' + (open ? '' : ' resolved') + '" role="listitem"><div class="top">' + glyph(i.status, ui.drawId === i.id) +
           '<div><div class="jdesc">' + esc(i.desc) + '</div><div class="meta">' + meta + ' · <span class="jstate">' + esc(JEFF_WORD[i.status]) + '</span></div></div></div>' +
-          action +
+          action + echo +
           '<div><label class="sr" for="jn' + i.id + '">Note for item ' + i.no + '</label><input class="note-in" id="jn' + i.id + '" data-note="' + i.id + '" value="' + esc(i.note) + '" placeholder="Add a note, e.g. what this was for"></div></div>';
-      }).join('') + '</div>';
+      }).join('') + '</div>' +
+        '<ul class="jlegend" aria-label="What the marks mean">' +
+        '<li>' + glyph('jeff') + 'Waiting for you</li><li>' + glyph('hubdoc') + 'Done</li><li>' + glyph('missing') + 'Can’t find</li><li>' + glyph('explained') + 'No document</li></ul>';
     }
     return strip() + '<main id="main">' + head + body + '</main>';
   }
@@ -987,17 +1023,17 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (d.jset) {
       var q = d.jset.split(':');
       if (q[1] === 'explained') { ui.explainFor = q[0]; ui.reasonErr = null; render('#jr' + q[0]); return; }
-      setStatus(q[0], q[1], true); render('[data-jchange="' + q[0] + '"]'); return;
+      setStatus(q[0], q[1], true); var qi = state.items.find(function (x) { return x.id === q[0]; }); announce('Item ' + qi.no + (q[1] === 'hubdoc' ? ' marked done.' : ' marked can\u2019t find.')); render('[data-jchange="' + q[0] + '"]'); return;
     }
     if (d.jsave) {
       var reason = ((document.getElementById('jr' + d.jsave) || {}).value || '').trim();
       if (!reason) { ui.reasonErr = d.jsave; render('#jr' + d.jsave); return; }
       var ji = state.items.find(function (x) { return x.id === d.jsave; });
       ji.note = reason; pushItem(ji, { note: reason });
-      ui.explainFor = null; ui.reasonErr = null; setStatus(d.jsave, 'explained', true); render('[data-jchange="' + d.jsave + '"]'); return;
+      ui.explainFor = null; ui.reasonErr = null; setStatus(d.jsave, 'explained', true); announce('Item ' + ji.no + ' saved as no document, with your reason.'); render('[data-jchange="' + d.jsave + '"]'); return;
     }
     if (d.jcancel) { ui.explainFor = null; ui.reasonErr = null; render(); return; }
-    if (d.jchange) { setStatus(d.jchange, 'jeff', true); render('[data-jset="' + d.jchange + ':hubdoc"]'); return; }
+    if (d.jchange) { setStatus(d.jchange, 'jeff', true); var ci = state.items.find(function (x) { return x.id === d.jchange; }); announce('Item ' + ci.no + ' is waiting for you again.'); render('[data-jset="' + d.jchange + ':hubdoc"]'); return; }
     if (ui.menuFor) { ui.menuFor = null; render(); }
   });
 
