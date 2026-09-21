@@ -16,7 +16,7 @@ Three roles, each behind a login:
 
 - **Client (owner and coordinator):** receives the bookkeeper's request, uploads documents to Hubdoc, works through the full checklist, and assigns the remainder to Jeff. Primary user.
 - **Jeff (contributor):** sees only a short list of the items assigned to him (his purchases), takes action on them, and sets each item's status himself.
-- **Bookkeeper (viewer):** sees the full checklist with statuses and the client's notes, so no separate email or shared spreadsheet is needed.
+- **Bookkeeper (reviewer):** sees the full checklist with statuses and notes, and reviews what has been resolved: they can accept an item, send it back to the client with a required reason, and reply in the item's conversation. They cannot edit statuses, owners or notes.
 
 ## Product Purpose
 
@@ -32,7 +32,7 @@ Bookkeeping runs on recurring cycles (month-end, quarter-end, tax season). Reque
 
 ## Capabilities and Constraints
 
-- Confirmed: admins manage people in the app (add, change role, reset password, remove); everyone signs in with email and password and can change their own; import the bookkeeper's spreadsheet as checklist items; per-item status and a short note; assign items to Jeff; Jeff has his own filtered list and updates his own statuses; bookkeeper has a live shared view; user login for all roles.
+- Confirmed: the bookkeeper reviews (Accept, or Reopen with a required message that returns the item to the admin as Waiting on me); every item has a small conversation, tied to the transaction so it survives re-imports; the one-line note stays as the item's current reason; admins manage people in the app (add, change role, reset password, remove); everyone signs in with email and password and can change their own; import the bookkeeper's spreadsheet as checklist items; per-item status and a short note; assign items to Jeff; Jeff has his own filtered list and updates his own statuses; bookkeeper has a live shared view; user login for all roles.
 - Documents stay in Hubdoc. The product stores no files.
 - Statuses: Waiting on me, In Hubdoc, With Jeff, No document (red flag, always with a note; set by Jeff or the client), Explained (the client has accepted the reason and closed the item).
 - Undecided: authentication method, stack, exact import format, whether the bookkeeper can reply or reopen items, reminders (out of scope for v1).
