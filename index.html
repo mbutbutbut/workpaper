@@ -128,7 +128,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .tickbtn[aria-expanded="true"] { border-color: var(--ink); background: var(--paper-deep); }
 .tick { width: 26px; height: 26px; overflow: visible; }
 .tick .g { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.t-waiting { color: var(--ink-soft); } .t-hubdoc { color: var(--blue); } .t-jeff { color: var(--ink); }
+.t-waiting { color: var(--ink-soft); }
+.t-waiting .g { stroke-linecap: butt; } .t-hubdoc { color: var(--blue); } .t-jeff { color: var(--ink); }
 .t-missing { color: var(--red); } .t-explained { color: var(--blue); }
 .tick.draw .g { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .45s var(--ease-out) forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
@@ -297,7 +298,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
   /* ---------- glyphs: the tickmark legend ---------- */
   var STATUS = {
-    waiting:   { label: 'Waiting on me', short: 'Waiting',   cls: 't-waiting',   open: true,  path: '<rect class="g" x="5" y="5" width="14" height="14" rx="1.5" pathLength="1"/>' },
+    waiting:   { label: 'Waiting on me', short: 'Waiting',   cls: 't-waiting',   open: true,  path: '<circle class="g" cx="12" cy="12" r="7.5" pathLength="1" stroke-dasharray="0.07 0.055"/>' },
     hubdoc:    { label: 'In Hubdoc',     short: 'In Hubdoc', cls: 't-hubdoc',    open: false, path: '<path class="g" d="M4 13.5 L9.5 19 L20.5 5" pathLength="1"/>' },
     jeff:      { label: 'With Jeff',     short: 'With Jeff', cls: 't-jeff',      open: true,  path: '<path class="g" d="M4 12 H18 M12.5 6 L18.5 12 L12.5 18" pathLength="1"/>' },
     missing:   { label: "Can't find",    short: "Can't find",cls: 't-missing',   open: true,  path: '<path class="g" d="M6 6 L18 18 M18 6 L6 18" pathLength="1"/>' },
@@ -306,7 +307,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   var ORDER = ['waiting', 'hubdoc', 'jeff', 'missing', 'explained'];
 
   function glyph(key, draw) {
-    return '<svg class="tick ' + STATUS[key].cls + (draw ? ' draw' : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + STATUS[key].path + '</svg>';
+    return '<svg class="tick ' + STATUS[key].cls + (draw && key !== 'waiting' ? ' draw' : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + STATUS[key].path + '</svg>';
   }
 
   /* ---------- fingerprints ---------- */
