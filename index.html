@@ -105,6 +105,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .row .cell { font-size: 14px; color: var(--ink-soft); padding-top: 3px; overflow-wrap: anywhere; }
 .row .cell-a { text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
 .row.head .cell-a { text-align: right; }
+.row.head .sel { padding: 0; margin: 0; align-self: center; place-items: center; }
+.selall-btn { display: none; }
 .row .descc .meta { display: none; }
 .row .no { color: var(--ink-soft); font-size: 14px; padding-top: 3px; }
 .row .desc { font-weight: 500; }
@@ -256,6 +258,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 @media (max-width: 760px) {
   .row { grid-template-columns: 34px minmax(0, 1fr) 44px; gap: 4px 10px; }
   .row .cell { display: none; }
+  .selall-btn { display: inline-flex; }
   .bulkbar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 10px; }
   .bulkbar .bacts { display: contents; }
   .bulkbar .bcount { grid-column: 1 / 3; grid-row: 1; align-self: center; }
@@ -490,7 +493,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function selectAllBtn() {
     var shown = shownItems();
     var all = shown.length && shown.every(function (i) { return ui.sel[i.id]; });
-    return '<button type="button" class="btn small" data-act="selall">' + (all ? 'Clear selection' : 'Select all shown') + '</button>';
+    return '<button type="button" class="btn small selall-btn" data-act="selall">' + (all ? 'Clear selection' : 'Select all shown') + '</button>';
   }
   function selectedItems() { return state.items.filter(function (i) { return ui.sel[i.id]; }); }
   function bulkBar() {
@@ -626,8 +629,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       var state = on ? (dir === -1 ? 'sorted ' + (key === 'amount' ? 'largest first' : 'newest first') : 'sorted ' + (key === 'amount' ? 'smallest first' : 'oldest first')) : 'sorted in the default order';
       return '<button type="button" class="hsort' + (on ? ' on' : '') + '" data-col="' + key + '" aria-label="' + label + ', ' + state + '. Activate to change.">' + label + tri + '</button>';
     }
-    var headRow = '<div class="row head' + (mode === 'bk' ? ' bk' : ' cl') + '">' + (mode === 'client' ? '<div></div>' : '') + '<div>No.</div><div>Item</div><div>' + sortBtn('date', 'Date') + '</div><div class="cell-a">' + sortBtn('amount', 'Amount') + '</div><div>Account</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
-    return '<div class="ledger">' + groups.map(function (g) {
+    var allShown = items.length && items.every(function (i) { return ui.sel[i.id]; });
+    var someShown = items.some(function (i) { return ui.sel[i.id]; });
+    var allBox = mode === 'client' ? '<div><label class="sel"><input type="checkbox" data-selall="1"' + (allShown ? ' checked' : '') + (someShown && !allShown ? ' data-partial="1"' : '') + '><span class="sr">Select all shown items</span></label></div>' : '';
+    var headRow = '<div class="row head' + (mode === 'bk' ? ' bk' : ' cl') + '">' + allBox + '<div>No.</div><div>Item</div><div>' + sortBtn('date', 'Date') + '</div><div class="cell-a">' + sortBtn('amount', 'Amount') + '</div><div>Account</div><div>Owner</div><div>Tick</div><div>Note</div></div>';
+    return '<div class="ledger">' + headRow + groups.map(function (g) {
       var open = g.items.filter(function (i) { return i.status === 'waiting' || i.status === 'jeff'; }).length;
       var flag = g.items.filter(function (i) { return i.status === 'missing'; }).length;
       var done = g.items.length - open - flag;
@@ -637,7 +643,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         '<span>' + glyph('hubdoc') + done + ' done</span></span>';
       var nSel = g.items.filter(function (i) { return ui.sel[i.id]; }).length;
       var mcheck = mode === 'client' ? '<label class="mcheck"><input type="checkbox" data-selmonth="' + g.key + '"' + (nSel === g.items.length ? ' checked' : '') + (nSel && nSel < g.items.length ? ' data-partial="1"' : '') + '><span class="sr">Select all items in ' + esc(monthLabel(g.key)) + '</span></label>' : '';
-      return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead' + (mode === 'client' ? ' cl' : '') + '"><span class="mleft">' + mcheck + '<h2>' + esc(monthLabel(g.key)) + '</h2></span>' + count + '</div>' + headRow +
+      return '<section class="month" aria-label="' + esc(monthLabel(g.key)) + '"><div class="mhead' + (mode === 'client' ? ' cl' : '') + '"><span class="mleft">' + mcheck + '<h2>' + esc(monthLabel(g.key)) + '</h2></span>' + count + '</div>' +
         g.items.map(function (i) { return rowHTML(i, mode); }).join('') + '</section>';
     }).join('') + '</div>';
   }
@@ -993,6 +999,10 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   app.addEventListener('change', function (e) {
     var t = e.target;
     if (t.dataset.sel) { if (t.checked) ui.sel[t.dataset.sel] = 1; else delete ui.sel[t.dataset.sel]; ui.notice = ''; render('[data-sel="' + t.dataset.sel + '"]'); return; }
+    if (t.dataset.selall) {
+      var shownNow = shownItems(); ui.sel = {}; if (t.checked) shownNow.forEach(function (i) { ui.sel[i.id] = 1; });
+      ui.notice = ''; ui.bulkExplain = false; render('[data-selall]'); return;
+    }
     if (t.dataset.selmonth) {
       shownItems().filter(function (i) { return String(monthKey(i)) === t.dataset.selmonth; }).forEach(function (i) { if (t.checked) ui.sel[i.id] = 1; else delete ui.sel[i.id]; });
       ui.notice = ''; render('[data-selmonth="' + t.dataset.selmonth + '"]'); return;
