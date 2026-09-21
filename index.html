@@ -301,7 +301,12 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   .row.cl .descc { grid-column: 3; grid-row: 1; }
   .row.cl .tick-cell { grid-column: 4; grid-row: 1; }
   .row.cl .owner, .row.cl .ownertxt { grid-column: 3 / 5; grid-row: 2; }
-  .row.cl .notec { grid-column: 3 / 5; grid-row: 3; }
+  .row.cl .notec { grid-column: 3 / 4; grid-row: 3; }
+  .row.cl .thc { grid-column: 4; grid-row: 3; }
+  .row.bk .thc { grid-column: 2 / 4; grid-row: 4; justify-content: flex-start; }
+  .row.bk .notec { grid-column: 2 / 3; }
+  .thbtn { height: 44px; min-width: 44px; }
+  .thc .btn.small { min-height: 44px; }
   .row .descc .meta { display: block; }
   .row.head { display: none; }
   .row .no { grid-row: 1; grid-column: 1; }
@@ -367,12 +372,50 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .team .err { color: var(--red); font-weight: 500; }
 .team .ok { color: var(--blue); font-weight: 500; }
 
+/* review and conversation */
+@media (min-width: 761px) {
+  .row.cl { grid-template-columns: 30px 40px minmax(0, 1.9fr) 92px 96px minmax(0, 1.1fr) 92px 52px minmax(0, 1.6fr) 84px; }
+  .row.bk { grid-template-columns: 40px minmax(0, 1.9fr) 92px 96px minmax(0, 1.1fr) 72px 52px minmax(0, 1.5fr) 250px; }
+}
+.thc { display: flex; gap: 6px; align-items: flex-start; justify-content: flex-end; flex-wrap: wrap; }
+.thc .btn.small { min-height: 34px; padding: 4px 10px; }
+.reviewed { display: inline-flex; align-items: center; height: 34px; }
+.reviewed .tick { width: 24px; height: 24px; }
+.thbtn { position: relative; display: inline-flex; align-items: center; gap: 4px; min-width: 44px; height: 34px; padding: 0 6px; border: 1px solid transparent; background: transparent; border-radius: 3px; }
+.thbtn:hover, .thbtn.on { border-color: var(--ink-soft); background: var(--paper-deep); }
+.thbtn .tick { width: 22px; height: 22px; }
+.thbtn .thn { font-size: 13px; font-weight: 600; min-width: 8px; }
+.newdot { position: absolute; top: 2px; right: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--blue); border: 2px solid var(--paper); }
+.sent { display: flex; gap: 6px; align-items: flex-start; margin-top: 4px; font-size: 14px; color: var(--ink); }
+.sent .tick { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+.sent b { font-weight: 700; }
+.thread { grid-column: 1 / -1; background: var(--paper-deep); border-bottom: 1px solid var(--rule-strong); }
+.thread-in { padding: 14px 16px 16px; max-width: 760px; }
+.thead { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.thead h3 { margin: 0; font-size: 1rem; }
+.msgs { list-style: none; margin: 10px 0 12px; padding: 0; display: grid; gap: 10px; }
+.msg .mhd { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 14px; }
+.msg .mhd time { color: var(--ink-soft); margin-left: auto; }
+.msg p { margin: 2px 0 0; font-family: var(--font-pencil); font-size: 21px; line-height: 1.15; color: var(--blue); white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.none { color: var(--ink-soft); }
+.mtag { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--ink); padding: 0 6px; border-radius: 2px; }
+.mtag.ok { border-color: var(--blue); color: var(--blue); }
+.tform label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; }
+.tform textarea { width: 100%; min-height: 76px; border: 1px solid var(--ink); background: var(--field); padding: 10px 12px; border-radius: 3px; font-size: 16px; }
+.tform .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.tform .err { display: block; color: var(--red); font-weight: 500; margin-top: 4px; }
+.jthread { display: flex; gap: 8px; align-items: center; color: var(--ink-soft); font-size: 14px; }
+.jrow .thread { grid-column: 2; border: 1px solid var(--rule-strong); border-radius: 3px; }
+.thread-row-hidden { display: none; }
+
 /* adapt: phone and touch comfort */
 .sortsel { display: none; }
 .lshort { display: none; }
 @media (max-width: 760px), (pointer: coarse) {
   select, input[type=text], input[type=email], textarea { font-size: 16px; }
   .btn.small, .tabs button, .seg button, .link, .menu button, .bulkbar button, .jchange { min-height: 44px; }
+  .thc .btn.small { min-height: 44px; }
+  .thbtn { height: 44px; min-width: 44px; }
   .btn.small { padding-block: 8px; }
   .link { display: inline-flex; align-items: center; padding: 0 4px; }
   .row .owner select, #histSel, #histSel2, #colSel { min-height: 44px; }
@@ -459,7 +502,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   /* ---------- sample data (synthetic) ---------- */
   function makeItems(rows, prefix) {
     return stampFingerprints(rows.map(function (r, i) {
-      return { id: prefix + (i + 1), no: i + 1, date: r[0], desc: r[1], memo: '', amount: r[2], owner: r[3], status: r[4], note: r[5], source: r[6] || 'Business card A' };
+      return { id: prefix + (i + 1), no: i + 1, date: r[0], desc: r[1], memo: '', amount: r[2], owner: r[3], status: r[4], note: r[5], source: r[6] || 'Business card A', reviewed: false, sentBack: false };
     }));
   }
   function sample() {
@@ -483,6 +526,19 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       ['03/25/2026', 'Packaging supplier, shipping boxes', '188.40', 'me', 'waiting', ''],
       ['03/27/2026', 'Cash withdrawal', '300.00', 'me', 'explained', "Paid for Jeff's day labour. No paperwork.", 'Chequing']
     ], 's');
+  }
+  // A small conversation so the prototype shows the review flow.
+  function sampleComments(items) {
+    var by = {}; items.forEach(function (i) { by[i.no] = i; });
+    function fp(n) { return by[n] && by[n].fp; }
+    var c = {};
+    if (fp(6)) c[fp(6)] = [
+      { id: 'c1', role: 'client', kind: 'message', body: 'This looks like a customer payment. Checking the bank app for who sent it.', at: '2026-03-09T14:10:00Z' },
+      { id: 'c2', role: 'bookkeeper', kind: 'message', body: 'Thanks. If you find the sender, I can code it to sales.', at: '2026-03-09T16:42:00Z' }];
+    if (fp(5)) { by[5].sentBack = true; c[fp(5)] = [
+      { id: 'c3', role: 'bookkeeper', kind: 'reopen', body: 'The receipt does not show the store name. Can you attach the card statement line too?', at: '2026-03-10T15:05:00Z' }]; }
+    if (fp(13)) { by[13].reviewed = true; c[fp(13)] = [{ id: 'c4', role: 'bookkeeper', kind: 'accept', body: 'Accepted', at: '2026-03-10T15:08:00Z' }]; }
+    return c;
   }
   function sampleHistory() {
     return [{ id: 'h1', name: 'February request', importedAt: '2026-03-01', items: makeItems([
@@ -512,9 +568,10 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     xlsxLoad = xlsxLoad || loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js').catch(function (e) { xlsxLoad = null; throw e; });
     return xlsxLoad;
   }
-  var state = useRemote ? { items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || { items: sample(), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null };
+  var state = useRemote ? { comments: {}, items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || (function () { var it = sample(); return { items: it, comments: sampleComments(it), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null }; })();
   if (!state.history) state.history = [];
-  var ui = { teamOpen: false, team: { people: null, msg: null, draft: { email: '', role: 'jeff', password: '' }, confirmRemove: null, resetFor: null, busy: false }, accountOpen: false, acctMsg: null, busy: false, fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
+  if (!state.comments) state.comments = {};
+  var ui = { threadFor: null, threadErr: '', draft: {}, teamOpen: false, team: { people: null, msg: null, draft: { email: '', role: 'jeff', password: '' }, confirmRemove: null, resetFor: null, busy: false }, accountOpen: false, acctMsg: null, busy: false, fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function save() { invalidate(); if (useRemote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -596,6 +653,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       if (ui.filter === 'open') return STATUS[i.status].open;
       if (ui.filter === 'jeff') return i.owner === 'jeff';
       if (ui.filter === 'done') return !STATUS[i.status].open && i.status !== 'missing';
+      if (ui.filter === 'review') return (i.status === 'hubdoc' || i.status === 'explained') && !i.reviewed;
+      if (ui.filter === 'sentback') return !!i.sentBack;
       return true;
     });
   }
@@ -618,13 +677,17 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var c = counts();
     var open = c.waiting + c.jeff;
     if (state.role === 'bookkeeper') {
+      var toReview = viewItems().filter(function (i) { return (i.status === 'hubdoc' || i.status === 'explained') && !i.reviewed; }).length;
       return '<div class="tally" aria-label="Summary">' +
+        '<span>' + markReviewed() + '<b class="num">' + toReview + '</b> to review</span>' +
         '<span>' + glyph('waiting') + '<b class="num">' + c.waiting + '</b> waiting on client</span>' +
         '<span>' + glyph('jeff') + '<b class="num">' + c.jeff + '</b> with Jeff</span>' +
         '<span>' + glyph('missing') + '<b class="num">' + c.missing + '</b> no document</span>' +
         '<span>' + glyph('hubdoc') + '<b class="num">' + (c.hubdoc + c.explained) + '</b> done</span></div>';
     }
+    var sentBackN = viewItems().filter(function (i) { return i.sentBack; }).length;
     var parts = [
+      (sentBackN ? '<span>' + markReturn() + '<b class="num">' + sentBackN + '</b> sent back</span>' : ''),
       '<span>' + glyph('waiting') + '<b class="num">' + open + '</b> open</span>',
       '<span>' + glyph('missing') + '<b class="num">' + c.missing + '</b> no document</span>',
       '<span>' + glyph('hubdoc') + '<b class="num">' + (c.hubdoc + c.explained) + '</b> done</span>'
@@ -677,6 +740,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function toolbar(showJeffTab) {
     var tabs = [['all', 'All'], ['open', 'Open']];
     if (showJeffTab) tabs.push(['jeff', 'With Jeff']);
+    if (state.role === 'client' && showJeffTab) tabs.push(['sentback', 'Sent back']);
+    if (state.role === 'bookkeeper') tabs.push(['review', 'To review']);
     tabs.push(['done', 'Done']);
     return '<div class="toolbar"><div class="tabs" role="group" aria-label="Filter">' +
       tabs.map(function (t) { return '<button type="button" data-filter="' + t[0] + '" aria-pressed="' + (ui.filter === t[0]) + '">' + t[1] + '</button>'; }).join('') +
@@ -822,6 +887,87 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     return h + '</div>';
   }
 
+  /* ---------- review and conversation ---------- */
+  var SEEN_KEY = 'workpaper-seen-v1';
+  function loadSeen() { try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || {}; } catch (e) { return {}; } }
+  var seen = loadSeen();
+  function saveSeen() { try { localStorage.setItem(SEEN_KEY, JSON.stringify(seen)); } catch (e) {} }
+  function msgs(it) { return (state.comments && state.comments[it.fp]) || []; }
+  function seenKey(it) { return (state.user || state.role || '') + '|' + it.fp; }
+  function isUnread(it) { var last = seen[seenKey(it)] || ''; return msgs(it).some(function (m) { return m.role !== state.role && String(m.at) > last; }); }
+  function lastReopen(it) { var l = msgs(it).filter(function (m) { return m.kind === 'reopen'; }); return l.length ? l[l.length - 1] : null; }
+  function canAccept(it) { return state.role === 'bookkeeper' && (it.status === 'hubdoc' || it.status === 'explained') && !it.reviewed; }
+  function canReopen(it) { return state.role === 'bookkeeper' && (it.status === 'hubdoc' || it.status === 'explained' || it.status === 'missing'); }
+  function fmtTime(iso) { var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+  function findItem(id) { return state.items.find(function (x) { return x.id === id; }); }
+
+  function markSvg(inner, cls) { return '<svg class="tick ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + inner + '</svg>'; }
+  // Reviewed: a check inside a ring (the bookkeeper has signed off). Sent back: a return arrow. Messages: a speech mark.
+  function markReviewed() { return markSvg('<circle class="g" cx="12" cy="12" r="9"/><path class="g" d="M7.5 12.5 L10.7 15.5 L16.5 9"/>', 't-hubdoc'); }
+  function markReturn() { return markSvg('<path class="g" d="M9 6 L4 11 L9 16"/><path class="g" d="M4 11 H14 a6 6 0 0 1 0 12 H10"/>', 't-jeff'); }
+  function markMsg() { return markSvg('<path class="g" d="M4 5 H20 V16 H11 L6 20 V16 H4 Z"/>', 't-jeff'); }
+
+  function addComment(it, role, kind, body) {
+    var list = state.comments[it.fp] = state.comments[it.fp] || [];
+    list.push({ id: 'c' + Date.now() + list.length, role: role, kind: kind, body: body, at: new Date().toISOString() });
+  }
+  // Each action works on the local prototype data, or asks the database to do it (which checks the rules).
+  function reviewAction(kind, it, message) {
+    if (useRemote) {
+      var call = kind === 'accept' ? remote.rpc('accept_item', { p_item: it.id }) : remote.rpc('reopen_item', { p_item: it.id, p_message: message });
+      return call.then(function (r) { if (r.error) throw r.error; return loadRemote(); });
+    }
+    if (kind === 'accept') { it.reviewed = true; it.sentBack = false; addComment(it, 'bookkeeper', 'accept', 'Accepted'); }
+    else { it.status = 'waiting'; it.owner = 'me'; it.reviewed = false; it.sentBack = true; addComment(it, 'bookkeeper', 'reopen', message); }
+    save(); return Promise.resolve();
+  }
+  function sendMessage(it, body) {
+    if (useRemote) {
+      return remote.from('comments').insert({ fingerprint: it.fp, author_id: state.uid, role: state.role, kind: 'message', body: body })
+        .then(function (r) { if (r.error) throw r.error; return loadRemote(); });
+    }
+    addComment(it, state.role, 'message', body); save(); return Promise.resolve();
+  }
+
+  function threadButton(it) {
+    var n = msgs(it).length, open = ui.threadFor === it.id;
+    return '<button type="button" class="thbtn' + (open ? ' on' : '') + '" data-thread="' + it.id + '" aria-expanded="' + open + '" aria-label="Conversation about item ' + it.no + ', ' + n + (n === 1 ? ' message' : ' messages') + (isUnread(it) ? ', new' : '') + '">' +
+      markMsg() + '<span class="thn num">' + (n || '') + '</span>' + (isUnread(it) ? '<span class="newdot" aria-hidden="true"></span>' : '') + '</button>';
+  }
+  function threadCell(it, mode) {
+    var h = '<div class="thc">';
+    if (it.reviewed) h += '<span class="reviewed" title="Reviewed by the bookkeeper">' + markReviewed() + '<span class="sr">Reviewed</span></span>';
+    if (state.role === 'bookkeeper' && mode === 'bk' && !pastView()) {
+      if (canAccept(it)) h += '<button type="button" class="btn small" data-review="accept:' + it.id + '">Accept</button>';
+      if (canReopen(it)) h += '<button type="button" class="btn small" data-review="ask:' + it.id + '">Reopen\u2026</button>';
+    }
+    return h + threadButton(it) + '</div>';
+  }
+  function sentTag(it) {
+    if (!it.sentBack) return '';
+    var m = lastReopen(it);
+    return '<span class="sent">' + markReturn() + '<span><b>Sent back</b>' + (m ? ': \u201c' + esc(m.body.length > 90 ? m.body.slice(0, 87) + '\u2026' : m.body) + '\u201d' : '') + '</span></span>';
+  }
+  function threadPanel(it, plain) {
+    var list = msgs(it);
+    var items = list.length ? list.map(function (m) {
+      var tag = m.kind === 'reopen' ? '<span class="mtag">Sent back</span>' : m.kind === 'accept' ? '<span class="mtag ok">Accepted</span>' : '';
+      return '<li class="msg ' + esc(m.kind) + '"><div class="mhd"><b>' + esc(ROLE_LABEL[m.role] || m.role) + '</b> ' + tag + '<time datetime="' + esc(m.at) + '">' + esc(fmtTime(m.at)) + '</time></div><p>' + (m.kind === 'accept' ? '' : esc(m.body)) + '</p></li>';
+    }).join('') : '<li class="msg none">No messages yet.</li>';
+    var draft = (ui.draft && ui.draft[it.id]) || '';
+    var review = '';
+    if (state.role === 'bookkeeper' && !pastView()) {
+      if (canReopen(it)) review += '<button type="button" class="btn" data-review="reopen:' + it.id + '">Send back with this message</button>';
+      if (canAccept(it)) review += '<button type="button" class="btn" data-review="accept:' + it.id + '">Accept</button>';
+    }
+    return '<div class="thread"' + (plain ? '' : ' role="row"') + '><div class="thread-in"' + (plain ? '' : ' role="cell"') + '><div class="thead"><h3>Conversation: ' + esc(it.desc) + '</h3><button type="button" class="link" data-act="closethread">Close</button></div>' +
+      '<ol class="msgs" aria-label="Messages">' + items + '</ol>' +
+      (pastView() ? '' : '<form class="tform" data-item="' + it.id + '"><label for="threadBody">Message</label><textarea id="threadBody" maxlength="1000" rows="3" placeholder="' +
+        (state.role === 'bookkeeper' && canReopen(it) ? 'Say what is missing, then choose Send back. Or just reply.' : 'Write a reply') + '">' + esc(draft) + '</textarea>' +
+        (ui.threadErr ? '<span class="err" role="alert">' + esc(ui.threadErr) + '</span>' : '') +
+        '<div class="acts"><button type="submit" class="btn primary">Send</button>' + review + '</div></form>') + '</div></div>';
+  }
+
   function rowHTML(item, mode) {
     var done = !STATUS[item.status].open && item.status !== 'missing';
     var cls = 'row' + (done ? ' done' : '') + (item.status === 'missing' ? ' flag' : '') + (mode === 'bk' ? ' bk' : '') + (mode === 'client' ? ' cl' + (ui.sel[item.id] ? ' selected' : '') : '');
@@ -840,11 +986,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     }
     var selCell = mode === 'client' ? '<label class="sel"><input type="checkbox" data-sel="' + item.id + '"' + (ui.sel[item.id] ? ' checked' : '') + '><span class="sr">Select item ' + item.no + '</span></label>' : '';
     return '<div class="' + cls + '">' + selCell + '<div class="no num">' + item.no + '</div>' +
-      '<div class="descc"><span class="desc">' + esc(item.desc) + '</span><span class="meta">' + meta + '</span></div>' +
+      '<div class="descc"><span class="desc">' + esc(item.desc) + '</span><span class="meta">' + meta + '</span>' + sentTag(item) + '</div>' +
       '<div class="cell cell-d num">' + (esc(item.date) || '\u2014') + '</div>' +
       '<div class="cell cell-a">' + (money(item.amount) || '\u2014') + '</div>' +
       '<div class="cell cell-s">' + (esc(item.source) || '\u2014') + '</div>' +
-      owner + tickCell(item, mode === 'client') + note + '</div>';
+      owner + tickCell(item, mode === 'client') + note + threadCell(item, mode) + '</div>' + (ui.threadFor === item.id ? threadPanel(item) : '');
   }
 
   function ledger(items, mode) {
@@ -864,7 +1010,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     function headRowFor(g) {
       var nSel = g.items.filter(function (i) { return ui.sel[i.id]; }).length;
       var box = mode === 'client' ? '<div><label class="sel"><input type="checkbox" data-selmonth="' + g.key + '"' + (nSel === g.items.length ? ' checked' : '') + (nSel && nSel < g.items.length ? ' data-partial="1"' : '') + '><span class="sr">Select all items in ' + esc(monthLabel(g.key)) + '</span></label></div>' : '';
-      return '<div class="row head' + (mode === 'bk' ? ' bk' : ' cl') + '">' + box + '<div>No.</div><div>Item</div><div data-sortcell="date">' + sortBtn('date', 'Date') + '</div><div class="cell-a" data-sortcell="amount">' + sortBtn('amount', 'Amount') + '</div><div>Account</div><div>Owner</div><div>Status</div><div>Note</div></div>';
+      return '<div class="row head' + (mode === 'bk' ? ' bk' : ' cl') + '">' + box + '<div>No.</div><div>Item</div><div data-sortcell="date">' + sortBtn('date', 'Date') + '</div><div class="cell-a" data-sortcell="amount">' + sortBtn('amount', 'Amount') + '</div><div>Account</div><div>Owner</div><div>Status</div><div>Note</div><div><span class="sr">Conversation</span></div></div>';
     }
     return '<div class="ledger" id="list" tabindex="-1">' + groups.map(function (g) {
       var open = g.items.filter(function (i) { return i.status === 'waiting' || i.status === 'jeff'; }).length;
@@ -919,7 +1065,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   /* ---------- bookkeeper ---------- */
   function renderBookkeeper() {
     var past = pastView();
-    var head = '<div class="sheet-head"><div><h1>' + esc(viewName()) + '</h1><p>Read-only view of the client’s progress. It updates as they work.</p></div>' + histBar() + '</div>';
+    var head = '<div class="sheet-head"><div><h1>' + esc(viewName()) + '</h1><p>Review what has been resolved. Accept it, or send it back with a reason. It updates as they work.</p></div>' + histBar() + '</div>';
     if (!viewItems().length) return strip() + '<main id="main" tabindex="-1">' + head + '<div class="empty"><h2>Nothing to show yet</h2><p>The client has not imported this request.</p></div></main>';
     return strip() + '<main id="main" tabindex="-1">' + head + pastBar() + tally() + toolbar(false) + ledger(shownItems(), 'bk') + '</main>' + legend();
   }
@@ -966,9 +1112,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         }
         var echo = '';
         return '<div class="jrow' + (open ? '' : ' resolved') + '" role="listitem"><div class="jno num" aria-hidden="true">' + i.no + '</div><div class="top">' + glyph(i.status, ui.drawId === i.id) +
-          '<div><div class="jdesc">' + esc(i.desc) + '</div><div class="meta">' + meta + ' · <span class="jstate">' + esc(JEFF_WORD[i.status]) + '</span></div></div></div>' +
+          '<div><div class="jdesc">' + esc(i.desc) + '</div><div class="meta">' + meta + ' · <span class="jstate">' + esc(JEFF_WORD[i.status]) + '</span></div>' + sentTag(i) + '</div></div>' +
           action + echo +
-          '<div><label class="sr" for="jn' + i.id + '">Note for item ' + i.no + '</label><input class="note-in" id="jn' + i.id + '" data-note="' + i.id + '" value="' + esc(i.note) + '" placeholder="Add a note, e.g. what this was for"></div></div>';
+          '<div><label class="sr" for="jn' + i.id + '">Note for item ' + i.no + '</label><input class="note-in" id="jn' + i.id + '" data-note="' + i.id + '" value="' + esc(i.note) + '" placeholder="Add a note, e.g. what this was for"></div>' +
+          '<div class="jthread">' + threadButton(i) + '<span class="jthl">' + (msgs(i).length ? (msgs(i).length === 1 ? '1 message' : msgs(i).length + ' messages') : 'Message the team') + '</span></div>' +
+          (ui.threadFor === i.id ? threadPanel(i, true) : '') + '</div>';
       }
       body = '<div class="jlist" id="list" tabindex="-1">' + (ui.notice ? '<div class="notice" role="status">' + esc(ui.notice) + (ui.jundo ? ' <button type="button" class="link" data-jundo="1">Undo</button>' : '') + '</div>' : '') + jtally +
         jgroups.map(function (g) {
@@ -1093,7 +1241,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var items = table.items.map(function (it, n) {
       var old = known[it.fp];
       var out = { id: 'i' + stamp + '_' + n, no: n + 1, date: it.date, desc: it.desc, memo: it.memo, amount: it.amount, source: it.source, fp: it.fp,
-        owner: old ? old.owner : 'me', status: old ? old.status : 'waiting', note: old ? old.note : it.note, isNew: !old && (state.items.length > 0) };
+        owner: old ? old.owner : 'me', status: old ? old.status : 'waiting', note: old ? old.note : it.note, isNew: !old && (state.items.length > 0), reviewed: old ? !!old.reviewed : false, sentBack: old ? !!old.sentBack : false };
       if (old) carried++; else fresh++;
       (it.problems || []).forEach(function (k) { warn[k]++; });
       if (/#[1-9]\d*$/.test(it.fp)) twins++;
@@ -1119,7 +1267,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   /* ---------- remote data (Supabase) ---------- */
   function dbItem(r) {
     return { id: r.id, no: r.no, date: r.item_date, desc: r.description, memo: r.memo, amount: r.amount, source: r.source, fp: r.fingerprint,
-      owner: r.owner, status: r.status, note: r.note, isNew: r.is_new, requestId: r.request_id };
+      owner: r.owner, status: r.status, note: r.note, isNew: r.is_new, requestId: r.request_id, reviewed: !!r.reviewed, sentBack: !!r.sent_back };
   }
   function fail(err, what) { ui.error = what + (err && err.message ? ' (' + err.message + ')' : ''); render(); }
 
@@ -1128,6 +1276,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (reqs.error) return fail(reqs.error, 'Could not load requests.');
     var its = await remote.from('items').select('*').order('no');
     if (its.error) return fail(its.error, 'Could not load items.');
+    var cm = await remote.from('comments').select('*').order('created_at');
+    state.comments = {};
+    if (!cm.error) cm.data.forEach(function (c) { (state.comments[c.fingerprint] = state.comments[c.fingerprint] || []).push({ id: c.id, role: c.role, kind: c.kind, body: c.body, at: c.created_at }); });
     var by = {};
     its.data.forEach(function (r) { (by[r.request_id] = by[r.request_id] || []).push(dbItem(r)); });
     var list = reqs.data.map(function (r) { return { id: r.id, name: r.name, importedAt: String(r.imported_at).slice(0, 10), items: by[r.id] || [] }; });
@@ -1153,10 +1304,10 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       ui.authError = 'This email is not set up for Workpaper yet. Ask the account owner to add you.';
       render(); return;
     }
-    state.user = session.user.email; state.role = m.data.role; ui.authError = '';
+    state.user = session.user.email; state.uid = session.user.id; state.role = m.data.role; ui.authError = '';
     ui.sort = state.role === 'bookkeeper' ? 'open' : 'number';
     await loadRemote();
-    remote.channel('items-live').on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, scheduleReload).subscribe();
+    remote.channel('items-live').on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, scheduleReload).on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, scheduleReload).subscribe();
   }
 
   function pushItem(it, fields) {
@@ -1174,7 +1325,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function runBulk(kind, reason) {
     var items = selectedItems(), n = items.length, ids = items.map(function (i) { return i.id; }), msg = '';
     if (kind === 'tojeff') {
-      items.forEach(function (i) { i.owner = 'jeff'; i.status = 'jeff'; });
+      items.forEach(function (i) { i.owner = 'jeff'; i.status = 'jeff'; i.reviewed = false; i.sentBack = false; });
       pushMany(ids, { owner: 'jeff', status: 'jeff' }); msg = 'Gave ' + n + (n === 1 ? ' item' : ' items') + ' to Jeff.';
     } else if (kind === 'takeback') {
       var back = items.filter(function (i) { return i.status === 'jeff'; }).map(function (i) { return i.id; });
@@ -1182,11 +1333,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       pushMany(back, { owner: 'me', status: 'waiting' }); pushMany(ids.filter(function (x) { return back.indexOf(x) < 0; }), { owner: 'me' });
       msg = 'Took back ' + n + (n === 1 ? ' item' : ' items') + '.';
     } else if (kind === 'hubdoc') {
-      items.forEach(function (i) { i.status = 'hubdoc'; });
+      items.forEach(function (i) { i.status = 'hubdoc'; i.reviewed = false; i.sentBack = false; });
       pushMany(ids, { status: 'hubdoc' }); msg = 'Marked ' + n + (n === 1 ? ' item' : ' items') + ' In Hubdoc.';
     } else if (kind === 'explain') {
       var blank = [], kept = 0;
-      items.forEach(function (i) { i.status = 'explained'; if (!i.note) { i.note = reason; blank.push(i.id); } else kept++; });
+      items.forEach(function (i) { i.status = 'explained'; i.reviewed = false; i.sentBack = false; if (!i.note) { i.note = reason; blank.push(i.id); } else kept++; });
       pushMany(ids, { status: 'explained' }); pushMany(blank, { note: reason });
       msg = 'Explained ' + n + (n === 1 ? ' item' : ' items') + '.' + (kept ? ' ' + kept + (kept === 1 ? ' kept its' : ' kept their') + ' existing note.' : '');
     }
@@ -1198,7 +1349,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (r.error) { ui.importing = false; return fail(r.error, 'Could not create the request.'); }
     var rows = plan.items.map(function (it) {
       return { request_id: r.data.id, no: it.no, item_date: it.date, description: it.desc, memo: it.memo || '', amount: it.amount || '', source: it.source || '',
-        fingerprint: it.fp, owner: it.owner, status: it.status, note: it.note || '', is_new: !!it.isNew };
+        fingerprint: it.fp, owner: it.owner, status: it.status, note: it.note || '', is_new: !!it.isNew, reviewed: !!it.reviewed, sent_back: !!it.sentBack };
     });
     var ins = await remote.from('items').insert(rows);
     if (ins.error) { ui.importing = false; await remote.from('requests').delete().eq('id', r.data.id); return fail(ins.error, 'Could not save the imported items.'); }
@@ -1210,6 +1361,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function setStatus(id, key, byJeff) {
     var it = state.items.find(function (x) { return x.id === id; });
     if (!it || !STATUS[key]) return;
+    if (key !== it.status && key !== 'waiting') { it.reviewed = false; it.sentBack = false; }
     it.status = key;
     if (!byJeff) {
       if (key === 'jeff') it.owner = 'jeff';
@@ -1226,8 +1378,33 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (!t) { if (ui.menuFor) { ui.menuFor = null; render(); } return; }
     var d = t.dataset;
     if (d.signin) { state.user = ROLE_EMAIL[d.signin]; state.role = d.signin; save(); render('#main'); return; }
-    if (d.role) { ui.jundo = null; ui.sel = {}; ui.notice = ''; state.role = d.role; state.user = ROLE_EMAIL[d.role]; ui.menuFor = null; ui.filter = 'all'; ui.sort = d.role === 'bookkeeper' ? 'open' : 'number'; save(); render(); return; }
+    if (d.role) { ui.threadFor = null; ui.threadErr = ''; ui.jundo = null; ui.sel = {}; ui.notice = ''; state.role = d.role; state.user = ROLE_EMAIL[d.role]; ui.menuFor = null; ui.filter = 'all'; ui.sort = d.role === 'bookkeeper' ? 'open' : 'number'; save(); render(); return; }
     if (d.act === 'dismisserr') { ui.error = ''; render(); return; }
+    if (d.thread) {
+      var tid = d.thread, ti = findItem(tid) || viewItems().find(function (x) { return x.id === tid; });
+      if (ui.threadFor === tid) { ui.threadFor = null; render('[data-thread="' + tid + '"]'); return; }
+      ui.threadFor = tid; ui.threadErr = '';
+      if (ti) { seen[seenKey(ti)] = new Date().toISOString(); saveSeen(); }
+      render('#threadBody'); return;
+    }
+    if (d.act === 'closethread') { var was = ui.threadFor; ui.threadFor = null; ui.threadErr = ''; render('[data-thread="' + was + '"]'); return; }
+    if (d.review) {
+      var rp = d.review.split(':'), rk = rp[0], rid = rp[1], rit = viewItems().find(function (x) { return x.id === rid; });
+      if (!rit) return;
+      if (rk === 'ask') { ui.threadFor = rid; ui.threadErr = ''; render('#threadBody'); return; }
+      if (rk === 'accept') {
+        reviewAction('accept', rit).then(function () { announce('Item ' + rit.no + ' accepted.'); render('[data-thread="' + rid + '"]'); })
+          .catch(function (err) { ui.error = 'Could not accept that item' + (err && err.message ? ' (' + err.message + ')' : '') + '.'; render(); });
+        return;
+      }
+      if (rk === 'reopen') {
+        var box = document.getElementById('threadBody'), text = ((box && box.value) || (ui.draft[rid] || '')).trim();
+        if (!text) { ui.threadErr = 'Say what is missing so the client knows what to do.'; render('#threadBody'); return; }
+        reviewAction('reopen', rit, text).then(function () { ui.draft[rid] = ''; ui.threadErr = ''; announce('Item ' + rit.no + ' sent back to the client.'); render('#threadBody'); })
+          .catch(function (err) { ui.threadErr = 'Could not send it back' + (err && err.message ? ' (' + err.message + ')' : '') + '.'; render('#threadBody'); });
+        return;
+      }
+    }
     if (d.act === 'team') { ui.teamOpen = !ui.teamOpen; ui.accountOpen = false; ui.team.msg = null; ui.team.confirmRemove = null; ui.team.resetFor = null; if (ui.teamOpen && !ui.team.people) loadTeam('#addEmail'); else render(ui.teamOpen ? '#addEmail' : '[data-act="team"]'); return; }
     if (d.act === 'closeteam') { ui.teamOpen = false; ui.team.msg = null; render('[data-act="team"]'); return; }
     if (d.teamdo) {
@@ -1255,8 +1432,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     }
     if (d.act === 'account') { ui.accountOpen = !ui.accountOpen; ui.teamOpen = false; ui.acctMsg = null; render(ui.accountOpen ? '#pwCur' : '[data-act="account"]'); return; }
     if (d.act === 'closeaccount') { ui.accountOpen = false; ui.acctMsg = null; render('[data-act="account"]'); return; }
-    if (d.act === 'signout' && remote) { ui.accountOpen = false; ui.acctMsg = null; ui.teamOpen = false; ui.team.people = null; ui.team.msg = null; remote.auth.signOut().then(function () { state.user = null; state.role = null; ui.sent = false; render(); }); return; }
-    if (d.act === 'signout') { state.user = null; state.role = null; ui.sent = false; save(); render(); return; }
+    if (d.act === 'signout' && remote) { ui.threadFor = null; ui.draft = {}; ui.accountOpen = false; ui.acctMsg = null; ui.teamOpen = false; ui.team.people = null; ui.team.msg = null; remote.auth.signOut().then(function () { state.user = null; state.role = null; ui.sent = false; render(); }); return; }
+    if (d.act === 'signout') { ui.threadFor = null; ui.draft = {}; state.user = null; state.role = null; ui.sent = false; save(); render(); return; }
     if (d.act === 'openimport') { ensureXLSX().catch(function () {}); ui.importOpen = true; ui.importMsg = null; ui.pending = null; ui.viewId = null; render('#csvText'); return; }
     if (d.act === 'closeimport') { ui.importOpen = false; ui.pending = null; ui.importMsg = null; render(); return; }
     if (d.act === 'checkpaste') {
@@ -1328,6 +1505,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
   app.addEventListener('input', function (e) {
     var id = e.target.id;
+    if (id === 'threadBody' && ui.threadFor) { ui.draft[ui.threadFor] = e.target.value; ui.threadErr = ''; }
     if (id === 'addEmail') ui.team.draft.email = e.target.value;
     else if (id === 'addPw') ui.team.draft.password = e.target.value;
   });
@@ -1410,6 +1588,16 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         return;
       }
       ui.sent = true; render('[data-signin="client"]');
+      return;
+    }
+    if (e.target.classList && e.target.classList.contains('tform')) {
+      e.preventDefault();
+      var fid = e.target.getAttribute('data-item'), fit = viewItems().find(function (x) { return x.id === fid; });
+      var body = (document.getElementById('threadBody').value || '').trim();
+      if (!fit) return;
+      if (!body) { ui.threadErr = 'Write a message first.'; render('#threadBody'); return; }
+      sendMessage(fit, body).then(function () { ui.draft[fid] = ''; ui.threadErr = ''; seen[seenKey(fit)] = new Date().toISOString(); saveSeen(); announce('Message sent.'); render('#threadBody'); })
+        .catch(function (err) { ui.threadErr = 'Could not send the message' + (err && err.message ? ' (' + err.message + ')' : '') + '.'; render('#threadBody'); });
       return;
     }
     if (e.target.id === 'addForm') {

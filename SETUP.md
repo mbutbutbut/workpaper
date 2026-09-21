@@ -52,9 +52,13 @@ Admins can add, edit and remove people from the app (top right: **Team**). This 
 
 Roles are shown as **Admin**, **Bookkeeper** and **Team member** (the database names are `client`, `bookkeeper` and `jeff`). Only an admin can use the Team screen, and the function checks that on every request. You cannot remove or change yourself, and there must always be one admin.
 
+## 4c. Turn on review and conversations
+
+Run `supabase/review.sql` once in the SQL editor (after `schema.sql`). It adds the review marks, the conversation table, and two database actions (`accept_item`, `reopen_item`) that only the bookkeeper can use. Then run the role check below; it now tests these too.
+
 ## 5. Check the rules
 
-Paste `supabase/role-check.sql` into the SQL editor and run it. It acts as each person in turn, using the same database rules the app uses, then shows a PASS/FAIL table. Every row must say PASS, and it deletes its own test data.
+Paste `supabase/role-check.sql` into the SQL editor and run it (after `review.sql`). It acts as each person in turn, using the same database rules the app uses, then shows a PASS/FAIL table. Every row must say PASS, and it deletes its own test data.
 
 Then confirm in the real app, signed in as each person:
 - Jeff sees only his items and can change only status and note.

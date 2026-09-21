@@ -220,6 +220,9 @@ Square-ish and exact: controls have 3px corners, focus rings have a 2px corner, 
 
 ## Components
 
+### Review and conversation
+Three extra marks and one panel, all drawn in the same stroke as the status marks: a **ring with a check** for Reviewed (the bookkeeper signed off), a **return arrow** for Sent back, and a **speech mark** with a count and a small blue dot when there is something new. A sent-back item shows a one-line "Sent back: \u201c...\u201d" under its title. The conversation opens inline under the row as a Deep Paper Green panel: messages oldest first, each with the person's role and time, text in Pencil Blue handwriting (it was written by a person), Sent back and Accepted as small outlined tags; a plain textarea and Send below. It is never a modal. Reopen and Accept never use red.
+
 ### Status marks (signature)
 Five drawn glyphs, each a distinct shape, always shown with a label or the pinned legend:
 - **Dashed circle** (Soft Slate): waiting on me.
