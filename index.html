@@ -1263,7 +1263,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       if (remote) {
         ui.authError = '';
         remote.auth.signInWithOtp({ email: ui.email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } }).then(function (r) {
-          if (r.error) { ui.authError = 'Could not send the link. Check the email address, or ask the account owner to add you.'; ui.sent = false; }
+          if (r.error) {
+            var limited = r.error.status === 429 || /rate limit|security purposes|seconds/i.test(r.error.message || '');
+            ui.authError = limited
+              ? 'A link was already sent to that address. Check your inbox and Spam, and wait a minute before asking for another.'
+              : 'Could not send the link. Check the email address, or ask the account owner to add you.';
+            ui.sent = limited;
+          }
           else ui.sent = true;
           render('#email');
         });
