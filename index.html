@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Workpaper</title>
 <meta name="description" content="One shared checklist for the bookkeeper's document request.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -302,6 +302,37 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   .tick.draw .g { animation: none; stroke-dashoffset: 0; }
   * { transition: none !important; }
 }
+
+/* adapt: phone and touch comfort */
+.sortsel { display: none; }
+.lshort { display: none; }
+@media (max-width: 760px), (pointer: coarse) {
+  select, input[type=text], input[type=email], textarea { font-size: 16px; }
+  .btn.small, .tabs button, .seg button, .link, .menu button, .bulkbar button, .jchange { min-height: 44px; }
+  .btn.small { padding-block: 8px; }
+  .link { display: inline-flex; align-items: center; padding: 0 4px; }
+  .row .owner select, #histSel, #colSel { min-height: 44px; }
+  .note-in { min-height: 44px; }
+  .tickbtn { width: 44px; height: 44px; margin: -8px 0 0 -8px; }
+  .sel { min-height: 44px; margin: -10px -8px -6px; padding-top: 12px; }
+  .mcheck { min-height: 44px; }
+  .tabs button { padding-inline: 12px; }
+}
+@media (max-width: 760px) {
+  .strip.proto { padding: 4px var(--pad); gap: 0 12px; justify-content: space-between; }
+  .strip.proto .who, .strip.proto .plabel { display: none; }
+  .strip.proto > span:last-child { width: 100%; justify-content: space-between; flex-wrap: nowrap; }
+  .sortsel { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-soft); }
+  .sortsel select { border: 1px solid var(--ink-soft); background: var(--paper); border-radius: 3px; padding: 6px 8px; }
+  .mhead.cl .mcheck { width: 44px; margin: -10px 0 -10px -8px; }
+  .legend { padding-top: 6px; }
+  .legend ul { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; text-align: center; font-size: 11px; }
+  .legend li { flex-direction: column; gap: 2px; justify-content: flex-start; }
+  .legend .lfull { display: none; }
+  .legend .lshort { display: inline; }
+  .legend .tick { width: 18px; height: 18px; }
+  main { padding-bottom: 96px; }
+}
 </style>
 </head>
 <body>
@@ -323,6 +354,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   var ORDER = ['waiting', 'hubdoc', 'jeff', 'missing', 'explained'];
 
   // Status words per role. The glyph never changes; only the wording follows who is reading.
+  var SHORT = { waiting: 'Waiting', hubdoc: 'In Hubdoc', jeff: 'With Jeff', missing: 'Can\u2019t find', explained: 'Explained' };
   function roleLabel(k) {
     if (state.role === 'bookkeeper' && k === 'waiting') return 'Waiting on client';
     return STATUS[k].label;
@@ -489,9 +521,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       return '<button type="button" data-role="' + r + '" aria-pressed="' + (role === r) + '">' + ROLE_LABEL[r] + '</button>';
     }).join('');
     var who = remote ? state.user : ROLE_EMAIL[role];
-    return '<div class="strip"><span class="who">Signed in as <strong>' + esc(who) + '</strong> &middot; ' + ROLE_LABEL[role] + '</span>' +
+    return '<div class="strip' + (remote ? '' : ' proto') + '"><span class="who">Signed in as <strong>' + esc(who) + '</strong> &middot; ' + ROLE_LABEL[role] + '</span>' +
       '<span style="display:inline-flex;gap:12px;align-items:center;flex-wrap:wrap">' +
-      (remote ? '' : '<span>Prototype, view as</span><span class="seg" role="group" aria-label="View as">' + seg + '</span>') +
+      (remote ? '' : '<span class="plabel">Prototype, view as</span><span class="seg" role="group" aria-label="View as">' + seg + '</span>') +
       '<button type="button" class="link" data-act="signout">Sign out</button></span></div>' +
       (ui.error ? '<div class="pastbar" role="alert" style="margin:8px var(--pad) 0;background:var(--red-wash);border-color:var(--red)"><span>' + esc(ui.error) + '</span><button type="button" class="btn small" data-act="dismisserr">Dismiss</button></div>' : '');
   }
@@ -516,9 +548,14 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
   function legend() {
     return '<footer class="legend"><ul aria-label="Tickmark legend"><li class="ttl">Tickmarks</li>' +
-      ORDER.map(function (k) { return '<li>' + glyph(k) + roleLabel(k) + '</li>'; }).join('') + '</ul></footer>';
+      ORDER.map(function (k) { return '<li>' + glyph(k) + '<span class="lfull">' + roleLabel(k) + '</span><span class="lshort">' + SHORT[k] + '</span></li>'; }).join('') + '</ul></footer>';
   }
 
+  function sortSelect() {
+    var c = ui.col, v = !c ? 'date-asc' : c.key + (c.dir === -1 ? '-desc' : '-asc');
+    var opts = [['date-asc', 'Date, oldest first'], ['date-desc', 'Date, newest first'], ['amount-desc', 'Amount, largest first'], ['amount-asc', 'Amount, smallest first']];
+    return '<label class="sortsel">Sort <select id="colSel">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === v ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>';
+  }
   function shownItems() { return sorted(filtered(viewItems())); }
   function selectAllBtn() {
     var shown = shownItems();
@@ -547,7 +584,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     tabs.push(['done', 'Done']);
     return '<div class="toolbar"><div class="tabs" role="group" aria-label="Filter">' +
       tabs.map(function (t) { return '<button type="button" data-filter="' + t[0] + '" aria-pressed="' + (ui.filter === t[0]) + '">' + t[1] + '</button>'; }).join('') +
-      '</div>' + (showJeffTab ? selectAllBtn() : '') + '<label class="sortlbl">Order <span class="seg" role="group" aria-label="Order">' +
+      '</div>' + (showJeffTab ? selectAllBtn() : '') + sortSelect() + '<label class="sortlbl">Order <span class="seg" role="group" aria-label="Order">' +
       '<button type="button" data-sort="number" aria-pressed="' + (ui.sort === 'number') + '">By number</button>' +
       '<button type="button" data-sort="open" aria-pressed="' + (ui.sort === 'open') + '">Open first</button></span></label></div>';
   }
@@ -1072,6 +1109,10 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (t.dataset.note) {
       var n = state.items.find(function (x) { return x.id === t.dataset.note; });
       n.note = t.value; save(); pushItem(n, { note: t.value }); return;
+    }
+    if (t.id === 'colSel') {
+      var cv = t.value.split('-'); ui.col = t.value === 'date-asc' ? null : { key: cv[0], dir: cv[1] === 'desc' ? -1 : 1 };
+      render('#colSel'); say('Sorted: ' + t.options[t.selectedIndex].text + '.'); return;
     }
     if (t.id === 'histSel') { ui.importOpen = false; ui.pending = null; ui.importMsg = null; ui.sel = {}; ui.notice = ''; ui.viewId = t.value || null; ui.filter = 'all'; render('#histSel'); return; }
     if (t.id === 'csvFile' && t.files[0]) {
