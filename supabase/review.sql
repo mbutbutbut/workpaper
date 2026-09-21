@@ -75,6 +75,7 @@ begin
   if it.status not in ('hubdoc', 'explained') then raise exception 'Only a resolved item can be accepted'; end if;
   perform set_config('app.review_fn', 'on', true);
   update items set reviewed = true, sent_back = false where id = p_item;
+  perform set_config('app.review_fn', 'off', true); -- never leave the switch on for the rest of the transaction
   insert into comments (fingerprint, author_id, role, kind, body) values (it.fingerprint, auth.uid(), 'bookkeeper', 'accept', 'Accepted');
 end $$;
 
@@ -91,6 +92,7 @@ begin
   if it.status in ('waiting', 'jeff') then raise exception 'That item is already open'; end if;
   perform set_config('app.review_fn', 'on', true);
   update items set status = 'waiting', owner = 'me', reviewed = false, sent_back = true where id = p_item;
+  perform set_config('app.review_fn', 'off', true);
   insert into comments (fingerprint, author_id, role, kind, body) values (it.fingerprint, auth.uid(), 'bookkeeper', 'reopen', m);
 end $$;
 
