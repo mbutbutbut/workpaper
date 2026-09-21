@@ -109,7 +109,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .selall-btn { display: none; }
 .row .descc .meta { display: none; }
 .row .no { color: var(--ink-soft); font-size: 14px; padding-top: 3px; }
-.row .desc { font-weight: 500; }
+.row .desc { font-weight: 500; overflow-wrap: anywhere; }
 .row .meta { display: block; color: var(--ink-soft); font-weight: 400; font-size: 14px; margin-top: 2px; }
 .row .owner select, .row .ownertxt { font-size: 14px; }
 .row .owner select { width: 100%; background: transparent; border: 1px solid transparent; border-bottom-color: var(--rule); padding: 4px 2px; border-radius: 0; }
@@ -136,6 +136,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .tick.draw .g { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .45s var(--ease-out) forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 .menu { position: absolute; z-index: 20; top: 38px; left: -8px; width: 232px; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 0 8px 20px -6px rgba(31,41,51,.28); padding: 4px; }
+.menu.up { top: auto; bottom: 38px; }
 .menu button { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 2px; min-height: 40px; }
 .menu button:hover, .menu button:focus-visible { background: var(--paper-deep); }
 .menu button[aria-checked="true"] { font-weight: 700; }
@@ -772,6 +773,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     else if (state.role === 'bookkeeper') app.innerHTML = renderBookkeeper();
     else app.innerHTML = renderClient();
     ui.drawId = null;
+    var menuNode = app.querySelector('.menu');
+    if (menuNode) {
+      var legNode = document.querySelector('.legend'), limit = window.innerHeight - (legNode ? legNode.getBoundingClientRect().height : 0) - 8;
+      if (menuNode.getBoundingClientRect().bottom > limit) menuNode.classList.add('up');
+    }
     app.querySelectorAll('input[data-partial]').forEach(function (i) { i.indeterminate = true; });
     window.scrollTo(0, scroll);
     if (focusSel) { var el = app.querySelector(focusSel); if (el) el.focus(); }
@@ -865,6 +871,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (t.error) { ui.pending = null; ui.importMsg = { kind: 'err', text: t.error }; }
     else { ui.pending = planImport(t); ui.importMsg = null; }
     render(ui.pending ? '#reqName, [data-act="discardpending"]' : '#csvText');
+    var target = document.querySelector('.review') || document.querySelector('.import .err');
+    if (target) target.scrollIntoView({ block: 'center' });
+    say(ui.pending ? 'Import checked. ' + ui.pending.stats.total + ' rows read, ' + ui.pending.stats.fresh + ' new.' : (ui.importMsg ? ui.importMsg.text : ''));
   }
 
   /* ---------- remote data (Supabase) ---------- */
@@ -919,7 +928,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (!remote || !ids.length) return;
     remote.from('items').update(fields).in('id', ids).then(function (r) { if (r.error) { fail(r.error, 'Your change was not saved.'); scheduleReload(); } });
   }
-  function announce(text) { ui.notice = text; var l = document.getElementById('live'); if (l) l.textContent = text; }
+  // say() only informs screen readers; announce() also shows a visible notice.
+  function say(text) { var l = document.getElementById('live'); if (!l) return; l.textContent = ''; setTimeout(function () { l.textContent = text; }, 30); }
+  function announce(text) { ui.notice = text; say(text); }
   function runBulk(kind, reason) {
     var items = selectedItems(), n = items.length, ids = items.map(function (i) { return i.id; }), msg = '';
     if (kind === 'tojeff') {
@@ -944,13 +955,14 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
   async function pushImport(plan, name) {
     var r = await remote.from('requests').insert({ name: name }).select().single();
-    if (r.error) return fail(r.error, 'Could not create the request.');
+    if (r.error) { ui.importing = false; return fail(r.error, 'Could not create the request.'); }
     var rows = plan.items.map(function (it) {
       return { request_id: r.data.id, no: it.no, item_date: it.date, description: it.desc, memo: it.memo || '', amount: it.amount || '', source: it.source || '',
         fingerprint: it.fp, owner: it.owner, status: it.status, note: it.note || '', is_new: !!it.isNew };
     });
     var ins = await remote.from('items').insert(rows);
-    if (ins.error) { await remote.from('requests').delete().eq('id', r.data.id); return fail(ins.error, 'Could not save the imported items.'); }
+    if (ins.error) { ui.importing = false; await remote.from('requests').delete().eq('id', r.data.id); return fail(ins.error, 'Could not save the imported items.'); }
+    ui.importing = false;
     await loadRemote();
   }
 
@@ -964,6 +976,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       if (key === 'waiting') it.owner = 'me';
     }
     ui.drawId = id; ui.menuFor = null;
+    if (!byJeff) say('Item ' + it.no + ': ' + roleLabel(key) + '.');
     save();
     pushItem(it, byJeff ? { status: key } : { status: key, owner: it.owner });
   }
@@ -988,7 +1001,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (d.act === 'backcurrent') { ui.viewId = null; render(); return; }
     if (d.act === 'confirmimport') {
       var nm = ((document.getElementById('reqName') || {}).value || '').trim() || ui.pending.name;
-      if (remote) { var plan = ui.pending; ui.pending = null; ui.importOpen = false; ui.importMsg = null; ui.filter = 'all'; ui.viewId = null; pushImport(plan, nm); return; }
+      if (remote) { if (ui.importing) return; ui.importing = true; var plan = ui.pending; ui.pending = null; ui.importOpen = false; ui.importMsg = null; ui.filter = 'all'; ui.viewId = null; pushImport(plan, nm); return; }
       if (state.items.length) state.history.unshift({ id: 'h' + Date.now(), name: state.cycle, importedAt: state.importedAt || new Date().toISOString().slice(0, 10), items: state.items });
       state.items = ui.pending.items; state.cycle = nm; state.sample = false; state.importedAt = new Date().toISOString().slice(0, 10);
       ui.pending = null; ui.importOpen = false; ui.importMsg = null; ui.filter = 'all'; ui.viewId = null; save(); render('#main'); return;
@@ -1016,9 +1029,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       else ui.col = !(c && c.key === 'amount') ? { key: 'amount', dir: -1 } : (c.dir === -1 ? { key: 'amount', dir: 1 } : null);
       render('[data-col="' + k + '"]'); return;
     }
-    if (d.filter) { ui.filter = d.filter; render(); return; }
-    if (d.sort) { ui.sort = d.sort; render(); return; }
-    if (d.menu) { ui.menuFor = ui.menuFor === d.menu ? null : d.menu; render(ui.menuFor ? '.menu button[aria-checked="true"], .menu button' : '[data-menu="' + d.menu + '"]'); return; }
+    if (d.filter) { ui.filter = d.filter; render(); var nShown = shownItems().length; say('Showing ' + nShown + (nShown === 1 ? ' item.' : ' items.')); return; }
+    if (d.sort) { ui.sort = d.sort; render(); say(d.sort === 'open' ? 'Open items first.' : 'In date order.'); return; }
+    if (d.menu) { ui.menuFor = ui.menuFor === d.menu ? null : d.menu; render(ui.menuFor ? '.menu button[aria-checked="true"]' : '[data-menu="' + d.menu + '"]'); return; }
     if (d.set) { var p = d.set.split(':'); setStatus(p[0], p[1], false); render('[data-menu="' + p[0] + '"]'); return; }
     if (d.jset) {
       var q = d.jset.split(':');
@@ -1054,13 +1067,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       // Handing an item over is one action: it always lands as With Jeff, and taking it back reopens it.
       if (t.value === 'jeff' && it.status !== 'jeff') { it.status = 'jeff'; ui.drawId = it.id; }
       if (t.value === 'me' && it.status === 'jeff') { it.status = 'waiting'; ui.drawId = it.id; }
-      save(); pushItem(it, { owner: it.owner, status: it.status }); render('#o' + it.id); return;
+      say('Item ' + it.no + (t.value === 'jeff' ? ' given to Jeff.' : ' taken back.')); save(); pushItem(it, { owner: it.owner, status: it.status }); render('#o' + it.id); return;
     }
     if (t.dataset.note) {
       var n = state.items.find(function (x) { return x.id === t.dataset.note; });
       n.note = t.value; save(); pushItem(n, { note: t.value }); return;
     }
-    if (t.id === 'histSel') { ui.sel = {}; ui.notice = ''; ui.viewId = t.value || null; ui.filter = 'all'; render('#histSel'); return; }
+    if (t.id === 'histSel') { ui.importOpen = false; ui.pending = null; ui.importMsg = null; ui.sel = {}; ui.notice = ''; ui.viewId = t.value || null; ui.filter = 'all'; render('#histSel'); return; }
     if (t.id === 'csvFile' && t.files[0]) {
       var f = t.files[0], fr = new FileReader();
       if (/\.(xlsx|xls)$/i.test(f.name)) {
@@ -1097,6 +1110,14 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   });
 
   document.addEventListener('keydown', function (e) {
+    var menuEl = e.target.closest && e.target.closest('.menu');
+    if (menuEl && ['ArrowDown', 'ArrowUp', 'Home', 'End'].indexOf(e.key) > -1) {
+      e.preventDefault();
+      var btns = Array.prototype.slice.call(menuEl.querySelectorAll('button')), at = btns.indexOf(document.activeElement);
+      var to = e.key === 'Home' ? 0 : e.key === 'End' ? btns.length - 1 : e.key === 'ArrowDown' ? (at + 1) % btns.length : (at - 1 + btns.length) % btns.length;
+      btns[to].focus(); return;
+    }
+    if (e.key === 'ArrowDown' && e.target.classList && e.target.classList.contains('tickbtn') && !ui.menuFor) { e.preventDefault(); e.target.click(); return; }
     if (e.key === 'Escape' && ui.menuFor) { var id = ui.menuFor; ui.menuFor = null; render('[data-menu="' + id + '"]'); }
   });
 
