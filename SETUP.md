@@ -97,3 +97,11 @@ Add it to your MCP client (for example Claude Desktop's config) with your own va
 ```
 
 Restart the client, then ask: "What's still open for Jeff?"
+
+## 8. Automatic checks on pull requests
+
+`.github/workflows/checks.yml` runs on every pull request: it checks that the app's scripts parse, that no secret keys are in the repo, and that the 24 Team-function tests pass. You can run the same checks yourself with `node scripts/check.js` and `node tests/team.test.js`.
+
+To make them required: in GitHub, open Settings → Rules → Rulesets → New branch ruleset, target `main`, turn on "Require a pull request before merging" and "Require status checks to pass", and add the check named `checks`.
+
+The checks cannot test the database rules. If a PR changes anything in `supabase/`, run that file and `role-check.sql` in the SQL editor before merging.
