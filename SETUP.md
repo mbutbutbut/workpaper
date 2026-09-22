@@ -64,9 +64,13 @@ Run `supabase/messages.sql` once (after `review.sql`). It lets people edit or re
 
 Run `supabase/member-names.sql` once (after `schema.sql`; any time relative to the others). It adds a first and last name to each person, and lets everyone signed in see everyone's name and role, so the app can show "Jeff" or whoever holds that role today instead of the generic word "Team". Add names for existing people in the Team screen ("Edit name"); new people get a name when you add them.
 
+### 4f. More than one team member
+
+Run `supabase/per-person-assignment.sql` once (after `schema.sql` and `member-names.sql`). Until now, "With team" was one pooled inbox: every team-role account saw everything the role had ever been given. This records who specifically an item is assigned to, so each team member gets their own separate list. It backfills existing items to whichever team member already exists; if you add a second one, reassign items to them from the Owner column.
+
 ## 5. Check the rules
 
-Paste `supabase/role-check.sql` into the SQL editor and run it (after `review.sql`, `messages.sql` and `member-names.sql`). It acts as each person in turn, using the same database rules the app uses, then shows a PASS/FAIL table. Every row must say PASS, and it deletes its own test data.
+Paste `supabase/role-check.sql` into the SQL editor and run it (after `review.sql`, `messages.sql`, `member-names.sql` and `per-person-assignment.sql`). It acts as each person in turn, using the same database rules the app uses, then shows a PASS/FAIL table. Every row must say PASS, and it deletes its own test data.
 
 Then confirm in the real app, signed in as each person:
 - The team member sees only their own items and can change only status and note.

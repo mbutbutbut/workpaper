@@ -15,10 +15,10 @@ create temp table results (check_name text, expected text, actual text);
 grant all on results to authenticated, anon;
 
 insert into requests (id, name) values ('00000000-0000-0000-0000-0000000000a1', 'ROLE CHECK (temporary)');
-insert into items (request_id, no, description, owner, status, fingerprint) values
-  ('00000000-0000-0000-0000-0000000000a1', 1, 'Client item',   'me',   'waiting', 'rolecheck-1'),
-  ('00000000-0000-0000-0000-0000000000a1', 2, 'Jeff item',     'jeff', 'jeff',    'rolecheck-2'),
-  ('00000000-0000-0000-0000-0000000000a1', 3, 'Resolved item', 'me',   'hubdoc',  'rolecheck-3');
+insert into items (request_id, no, description, owner, status, fingerprint, assignee_id) values
+  ('00000000-0000-0000-0000-0000000000a1', 1, 'Client item',   'me',   'waiting', 'rolecheck-1', null),
+  ('00000000-0000-0000-0000-0000000000a1', 2, 'Jeff item',     'jeff', 'jeff',    'rolecheck-2', (select user_id from members where role = 'jeff' limit 1)),
+  ('00000000-0000-0000-0000-0000000000a1', 3, 'Resolved item', 'me',   'hubdoc',  'rolecheck-3', null);
 insert into comments (fingerprint, role, kind, body) values
   ('rolecheck-1', 'client', 'message', 'thread on the client item'),
   ('rolecheck-2', 'client', 'message', 'thread on the Jeff item');
@@ -41,6 +41,24 @@ select set_config('request.jwt.claim.sub', (select user_id::text from members wh
 set role authenticated;
 insert into results select 'jeff sees only his item', '1', count(*)::text from items where request_id = '00000000-0000-0000-0000-0000000000a1';
 insert into results select 'jeff can see the bookkeeper''s name and role too, not just his own', '1', count(*)::text from members where role = 'bookkeeper';
+reset role;
+update items set assignee_id = (select user_id from members where role = 'bookkeeper' limit 1) where fingerprint = 'rolecheck-2';
+select set_config('request.jwt.claim.sub', (select user_id::text from members where role = 'jeff' limit 1), false),
+       set_config('request.jwt.claims', json_build_object('sub', (select user_id from members where role = 'jeff' limit 1), 'role', 'authenticated')::text, false);
+set role authenticated;
+insert into results select 'an item assigned to someone else is invisible to him, even with the right role', '0', count(*)::text from items where fingerprint = 'rolecheck-2';
+reset role;
+update items set assignee_id = (select user_id from members where role = 'jeff' limit 1) where fingerprint = 'rolecheck-2';
+select set_config('request.jwt.claim.sub', (select user_id::text from members where role = 'jeff' limit 1), false),
+       set_config('request.jwt.claims', json_build_object('sub', (select user_id from members where role = 'jeff' limit 1), 'role', 'authenticated')::text, false);
+set role authenticated;
+insert into results select 'it is visible again once reassigned back to him', '1', count(*)::text from items where fingerprint = 'rolecheck-2';
+do $$ begin
+  update items set assignee_id = (select user_id from members where role = 'bookkeeper' limit 1) where fingerprint = 'rolecheck-2';
+  insert into results values ('a team member cannot reassign an item to someone else', 'blocked', 'ALLOWED');
+exception when others then
+  insert into results values ('a team member cannot reassign an item to someone else', 'blocked', 'blocked');
+end $$;
 do $$ declare n int; begin
   update members set first_name = 'Hacked' where role = 'client';
   get diagnostics n = row_count;
