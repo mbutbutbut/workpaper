@@ -42,12 +42,14 @@ set role authenticated;
 insert into results select 'jeff sees only his item', '1', count(*)::text from items where request_id = '00000000-0000-0000-0000-0000000000a1';
 insert into results select 'jeff can see the bookkeeper''s name and role too, not just his own', '1', count(*)::text from members where role = 'bookkeeper';
 reset role;
+select set_config('request.jwt.claim.sub', '', false), set_config('request.jwt.claims', '', false);
 update items set assignee_id = (select user_id from members where role = 'bookkeeper' limit 1) where fingerprint = 'rolecheck-2';
 select set_config('request.jwt.claim.sub', (select user_id::text from members where role = 'jeff' limit 1), false),
        set_config('request.jwt.claims', json_build_object('sub', (select user_id from members where role = 'jeff' limit 1), 'role', 'authenticated')::text, false);
 set role authenticated;
 insert into results select 'an item assigned to someone else is invisible to him, even with the right role', '0', count(*)::text from items where fingerprint = 'rolecheck-2';
 reset role;
+select set_config('request.jwt.claim.sub', '', false), set_config('request.jwt.claims', '', false);
 update items set assignee_id = (select user_id from members where role = 'jeff' limit 1) where fingerprint = 'rolecheck-2';
 select set_config('request.jwt.claim.sub', (select user_id::text from members where role = 'jeff' limit 1), false),
        set_config('request.jwt.claims', json_build_object('sub', (select user_id from members where role = 'jeff' limit 1), 'role', 'authenticated')::text, false);
