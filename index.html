@@ -420,6 +420,17 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .bulkbar button.dangerbtn { border-color: var(--red-on-ink); background: var(--red-on-ink); color: var(--ink); }
 .bulkbar button.dangerbtn:hover { background: #ffffff; }
 
+/* date range */
+.rangesel, .rangecustom label { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-soft); }
+.rangesel select, .rangecustom input { border: 1px solid var(--ink-soft); background: var(--paper); border-radius: 3px; padding: 6px 8px; }
+.rangecustom { display: inline-flex; gap: 12px; flex-wrap: wrap; }
+.rangenote { margin: 0 0 8px; font-size: 14px; color: var(--ink-soft); }
+.rangenote b { color: var(--ink); font-weight: 600; }
+@media (max-width: 760px), (pointer: coarse) {
+  .rangesel select, .rangecustom input { min-height: 44px; font-size: 16px; }
+  .rangecustom { width: 100%; }
+}
+
 /* adapt: phone and touch comfort */
 .sortsel { display: none; }
 .lshort { display: none; }
@@ -585,12 +596,18 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   var state = useRemote ? { comments: {}, items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || (function () { var it = sample(); return { items: it, comments: sampleComments(it), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null }; })();
   if (!state.history) state.history = [];
   if (!state.comments) state.comments = {};
-  var ui = { editMsg: null, removeMsg: null, bulkDelete: false, threadFor: null, threadErr: '', draft: {}, teamOpen: false, team: { people: null, msg: null, draft: { email: '', role: 'jeff', password: '' }, confirmRemove: null, resetFor: null, busy: false }, accountOpen: false, acctMsg: null, busy: false, fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
+  var ui = { range: { key: 'fy', from: '', to: '' }, editMsg: null, removeMsg: null, bulkDelete: false, threadFor: null, threadErr: '', draft: {}, teamOpen: false, team: { people: null, msg: null, draft: { email: '', role: 'jeff', password: '' }, confirmRemove: null, resetFor: null, busy: false }, accountOpen: false, acctMsg: null, busy: false, fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function save() { invalidate(); if (useRemote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
   function pastView() { return ui.viewId ? state.history.find(function (h) { return h.id === ui.viewId; }) : null; }
-  function viewItems() { var p = pastView(); return p ? p.items : state.items; }
+  function rawItems() { var p = pastView(); return p ? p.items : state.items; }
+  // What the person is looking at: the request's items inside the chosen date range (computed once per render).
+  var viewCache = null;
+  function viewItems() {
+    if (!viewCache) { var b = rangeBounds(); viewCache = b ? rawItems().filter(function (i) { return inRange(i, b); }) : rawItems(); }
+    return viewCache;
+  }
   function viewName() { var p = pastView(); return p ? p.name : state.cycle; }
 
   var ROLE_LABEL = { client: 'Admin', jeff: 'Team member', bookkeeper: 'Bookkeeper' };
@@ -631,6 +648,54 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     }
     return null;
   }
+  // Date range. The fiscal year starts on FY_START (September by default; set fiscalYearStartMonth in config.js to change it).
+  var FY_START = +(CFG.fiscalYearStartMonth) || 9;
+  var RANGE_OPTS = [['fy', 'This fiscal year'], ['lastfy', 'Last fiscal year'], ['month', 'This month'], ['lastmonth', 'Last month'], ['all', 'All dates'], ['custom', 'Custom range']];
+  function dkey(y, m, d) { return y * 10000 + m * 100 + d; }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function lastDay(y, m) { return new Date(y, m, 0).getDate(); }
+  // Returns { from, to } as yyyymmdd numbers (either can be null), or null for "all dates".
+  function rangeBounds() {
+    var r = ui.range, now = new Date(), y = now.getFullYear(), m = now.getMonth() + 1;
+    if (r.key === 'all') return null;
+    if (r.key === 'fy' || r.key === 'lastfy') {
+      var sy = (m >= FY_START ? y : y - 1) - (r.key === 'lastfy' ? 1 : 0);
+      var ey = FY_START === 1 ? sy : sy + 1, em = FY_START === 1 ? 12 : FY_START - 1;
+      return { from: dkey(sy, FY_START, 1), to: dkey(ey, em, lastDay(ey, em)) };
+    }
+    if (r.key === 'month' || r.key === 'lastmonth') {
+      var mm = m - (r.key === 'lastmonth' ? 1 : 0), yy = y;
+      if (mm < 1) { mm = 12; yy--; }
+      return { from: dkey(yy, mm, 1), to: dkey(yy, mm, lastDay(yy, mm)) };
+    }
+    function iso(v) { var q = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return q ? dkey(+q[1], +q[2], +q[3]) : null; }
+    return { from: iso(r.from), to: iso(r.to) };
+  }
+  // Rows with no readable date (or no year) are never hidden by the range, so nothing disappears by accident.
+  function inRange(it, b) {
+    var d = parseDate(it.date);
+    if (!d || !d.y) return true;
+    var k = dkey(d.y, d.m, d.d);
+    return (b.from == null || k >= b.from) && (b.to == null || k <= b.to);
+  }
+  function fmtKey(k) { return MONTHS[(Math.floor(k / 100) % 100) - 1].slice(0, 3) + ' ' + (k % 100) + ', ' + Math.floor(k / 10000); }
+  function rangeText() {
+    var b = rangeBounds();
+    if (!b) return 'All dates';
+    if (b.from == null && b.to == null) return 'All dates';
+    return (b.from != null ? fmtKey(b.from) : 'Earliest') + ' – ' + (b.to != null ? fmtKey(b.to) : 'latest');
+  }
+  function rangeSelect() {
+    var r = ui.range;
+    return '<label class="rangesel">Dates <select id="rangeSel">' + RANGE_OPTS.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === r.key ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
+      (r.key === 'custom' ? '<span class="rangecustom"><label>From <input type="date" id="rangeFrom" value="' + esc(r.from) + '"></label><label>To <input type="date" id="rangeTo" value="' + esc(r.to) + '"></label></span>' : '');
+  }
+  function rangeNote() {
+    var b = rangeBounds(), all = rawItems().length, n = viewItems().length;
+    if (!b) return '';
+    return '<p class="rangenote" role="status">Showing <b>' + esc(rangeText()) + '</b> · <span class="num">' + n + '</span> of <span class="num">' + all + '</span> transactions' +
+      (n < all ? ' <button type="button" class="link" data-act="showall">Show all dates</button>' : '') + '</p>';
+  }
   function monthKey(it) { var d = parseDate(it.date); return d ? d.y * 100 + d.m : 999999; }
   function dayKey(it) { var d = parseDate(it.date); return d ? d.d : 99; }
   function monthLabel(key) {
@@ -639,24 +704,28 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     return MONTHS[m - 1] + (y ? ' ' + y : '');
   }
 
-  // Months run oldest to newest. Inside a month: by date, or open items first.
+  // Newest first by default, months and days alike. Rows with no date go last. Choosing 'oldest first' flips it.
   function sorted(list) {
     var rank = { waiting: 0, jeff: 0, missing: 1, hubdoc: 2, explained: 2 };
     var col = ui.col, byOpen = ui.sort === 'open';
+    var asc = !!(col && col.key === 'date' && col.dir === 1);
     // Read each date and amount once, not on every comparison.
     var rows = list.map(function (it) {
       var n = parseFloat(String(it.amount).replace(/[$,]/g, ''));
       return { it: it, m: monthKey(it), d: dayKey(it), r: rank[it.status], n: n, nan: isNaN(n) };
     });
     rows.sort(function (a, b) {
-      if (a.m !== b.m) return a.m - b.m;
+      if (a.m !== b.m) {
+        if (a.m === 999999) return 1;
+        if (b.m === 999999) return -1;
+        return asc ? a.m - b.m : b.m - a.m;
+      }
       if (byOpen && a.r !== b.r) return a.r - b.r;
       if (col && col.key === 'amount') {
         if (a.nan !== b.nan) return a.nan ? 1 : -1;
         if (!a.nan && a.n !== b.n) return (a.n - b.n) * col.dir;
       }
-      var dd = a.d - b.d;
-      if (col && col.key === 'date') dd *= col.dir;
+      var dd = asc ? a.d - b.d : b.d - a.d;
       return dd || a.it.no - b.it.no;
     });
     return rows.map(function (r) { return r.it; });
@@ -715,13 +784,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   }
 
   function sortSelect() {
-    var c = ui.col, v = !c ? 'date-asc' : c.key + (c.dir === -1 ? '-desc' : '-asc');
-    var opts = [['date-asc', 'Date, oldest first'], ['date-desc', 'Date, newest first'], ['amount-desc', 'Amount, largest first'], ['amount-asc', 'Amount, smallest first']];
+    var c = ui.col, v = !c ? 'date-desc' : c.key + (c.dir === -1 ? '-desc' : '-asc');
+    var opts = [['date-desc', 'Date, newest first'], ['date-asc', 'Date, oldest first'], ['amount-desc', 'Amount, largest first'], ['amount-asc', 'Amount, smallest first']];
     return '<label class="sortsel">Sort <select id="colSel">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === v ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>';
   }
   // The shown list is worked out once per render and reused by the toolbar, bulk bar and table.
   var shownCache = null;
-  function invalidate() { shownCache = null; }
+  function invalidate() { shownCache = null; viewCache = null; }
   function shownItems() { return shownCache || (shownCache = sorted(filtered(viewItems()))); }
   function selectAllBtn() {
     var shown = shownItems();
@@ -766,9 +835,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       tabs.map(function (t) { return '<button type="button" data-filter="' + t[0] + '" aria-pressed="' + (ui.filter === t[0]) + '">' + t[1] + '</button>'; }).join('') +
       '</div>' + (showJeffTab ? selectAllBtn() : '') +
       '<button type="button" class="btn small fs-toggle" data-act="togglefs" aria-expanded="' + !!ui.fsOpen + '" aria-controls="fsPanel">Filters &amp; sort</button>' +
-      '<div class="fs-panel' + (ui.fsOpen ? ' open' : '') + '" id="fsPanel">' + histCopy() + sortSelect() + '<label class="sortlbl">Order <span class="seg" role="group" aria-label="Order">' +
+      '<div class="fs-panel' + (ui.fsOpen ? ' open' : '') + '" id="fsPanel">' + histCopy() + rangeSelect() + sortSelect() + '<label class="sortlbl">Order <span class="seg" role="group" aria-label="Order">' +
       '<button type="button" data-sort="number" aria-pressed="' + (ui.sort === 'number') + '">By number</button>' +
-      '<button type="button" data-sort="open" aria-pressed="' + (ui.sort === 'open') + '">Open first</button></span></label></div></div>';
+      '<button type="button" data-sort="open" aria-pressed="' + (ui.sort === 'open') + '">Open first</button></span></label></div></div>' + rangeNote();
   }
 
   /* ---------- login ---------- */
@@ -1050,7 +1119,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   }
 
   function ledger(items, mode) {
-    if (!items.length) return '<p class="empty" style="padding:32px 0;color:var(--ink-soft)">Nothing matches this filter.</p>';
+    if (!items.length) return '<p class="empty" style="padding:32px 0;color:var(--ink-soft)">' + (rangeBounds() && rawItems().length ? 'No transactions in this date range. <button type="button" class="link" data-act="showall">Show all dates</button>' : 'Nothing matches this filter.') + '</p>';
     var groups = [], last;
     items.forEach(function (it) {
       var k = monthKey(it);
@@ -1058,9 +1127,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       last.items.push(it);
     });
     function sortBtn(key, label) {
-      var on = ui.col && ui.col.key === key, dir = on ? ui.col.dir : 0;
+      var on = key === 'date' ? (!ui.col || ui.col.key === 'date') : !!(ui.col && ui.col.key === key), dir = on ? (key === 'date' && !ui.col ? -1 : ui.col.dir) : 0;
       var tri = dir === -1 ? '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3h8L5 8z"/></svg>' : dir === 1 ? '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 7h8L5 2z"/></svg>' : '';
-      var state = on ? (dir === -1 ? 'sorted ' + (key === 'amount' ? 'largest first' : 'newest first') : 'sorted ' + (key === 'amount' ? 'smallest first' : 'oldest first')) : 'sorted in the default order';
+      var state = on ? (dir === -1 ? 'sorted ' + (key === 'amount' ? 'largest first' : 'newest first') : 'sorted ' + (key === 'amount' ? 'smallest first' : 'oldest first')) : 'not the sort order';
       return '<button type="button" class="hsort' + (on ? ' on' : '') + '" data-col="' + key + '" aria-label="' + label + ', ' + state + '. Activate to change.">' + label + tri + '</button>';
     }
     function headRowFor(g) {
@@ -1104,7 +1173,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function renderClient() {
     var past = pastView();
     var items = viewItems();
-    var hasItems = items.length > 0;
+    var hasItems = rawItems().length > 0;
     var head = '<div class="sheet-head"><div><h1>' + esc(viewName()) + '</h1><p>From ' + esc(state.from) + (state.sample && !past ? '. Sample data, replace it with an import.' : '.') + '</p></div>' +
       '<div style="display:grid;gap:10px;justify-items:end">' + '<button type="button" class="btn primary" data-act="openimport">Import request</button>' + histBar() + '</div></div>';
     var body;
@@ -1122,7 +1191,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function renderBookkeeper() {
     var past = pastView();
     var head = '<div class="sheet-head"><div><h1>' + esc(viewName()) + '</h1><p>Review what has been resolved. Accept it, or send it back with a reason. It updates as they work.</p></div>' + histBar() + '</div>';
-    if (!viewItems().length) return strip() + '<main id="main" tabindex="-1">' + head + '<div class="empty"><h2>Nothing to show yet</h2><p>The client has not imported this request.</p></div></main>';
+    if (!rawItems().length) return strip() + '<main id="main" tabindex="-1">' + head + '<div class="empty"><h2>Nothing to show yet</h2><p>The client has not imported this request.</p></div></main>';
     return strip() + '<main id="main" tabindex="-1">' + head + pastBar() + tally() + toolbar(false) + ledger(shownItems(), 'bk') + '</main>' + legend();
   }
 
@@ -1205,8 +1274,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       Array.prototype.forEach.call(row.children, function (c) { c.setAttribute('role', head ? 'columnheader' : 'cell'); });
     });
     app.querySelectorAll('[data-sortcell]').forEach(function (c) {
-      var k = c.getAttribute('data-sortcell'), on = ui.col && ui.col.key === k;
-      c.setAttribute('aria-sort', on ? (ui.col.dir === -1 ? 'descending' : 'ascending') : (k === 'date' ? 'ascending' : 'none'));
+      var k = c.getAttribute('data-sortcell'), on = k === 'date' ? (!ui.col || ui.col.key === 'date') : !!(ui.col && ui.col.key === k);
+      c.setAttribute('aria-sort', on ? ((k === 'date' && !ui.col) || ui.col.dir === -1 ? 'descending' : 'ascending') : 'none');
     });
     var skip = document.getElementById('skiplink');
     if (state.user && !ui.loading) {
@@ -1481,6 +1550,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         return;
       }
     }
+    if (d.act === 'showall') { ui.range = { key: 'all', from: '', to: '' }; ui.sel = {}; render('#rangeSel'); say('Showing all dates.'); return; }
     if (d.act === 'closethread') { var was = ui.threadFor; ui.threadFor = null; ui.threadErr = ''; render('[data-thread="' + was + '"]'); return; }
     if (d.review) {
       var rp = d.review.split(':'), rk = rp[0], rid = rp[1], rit = viewItems().find(function (x) { return x.id === rid; });
@@ -1571,9 +1641,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     }
     if (d.col) {
       var c = ui.col, k = d.col;
-      if (k === 'date') ui.col = (c && c.key === 'date') ? null : { key: 'date', dir: -1 };
+      if (k === 'date') ui.col = (c && c.key === 'date' && c.dir === 1) ? null : { key: 'date', dir: 1 };
       else ui.col = !(c && c.key === 'amount') ? { key: 'amount', dir: -1 } : (c.dir === -1 ? { key: 'amount', dir: 1 } : null);
-      render('[data-col="' + k + '"]'); say(!ui.col ? 'Default order.' : 'Sorted by ' + ui.col.key + ', ' + (ui.col.key === 'amount' ? (ui.col.dir === -1 ? 'largest first.' : 'smallest first.') : (ui.col.dir === -1 ? 'newest first.' : 'oldest first.'))); return;
+      render('[data-col="' + k + '"]'); say(!ui.col ? 'Default order, newest first.' : 'Sorted by ' + ui.col.key + ', ' + (ui.col.key === 'amount' ? (ui.col.dir === -1 ? 'largest first.' : 'smallest first.') : (ui.col.dir === -1 ? 'newest first.' : 'oldest first.'))); return;
     }
     if (d.act === 'togglefs') { ui.fsOpen = !ui.fsOpen; render('[data-act="togglefs"]'); return; }
     if (d.filter) { ui.filter = d.filter; render(); var nShown = shownItems().length; say('Showing ' + nShown + (nShown === 1 ? ' item.' : ' items.')); return; }
@@ -1643,8 +1713,10 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       var n = state.items.find(function (x) { return x.id === t.dataset.note; });
       n.note = t.value; save(); pushItem(n, { note: t.value }); return;
     }
+    if (t.id === 'rangeSel') { ui.range.key = t.value; ui.sel = {}; ui.notice = ''; render(t.value === 'custom' ? '#rangeFrom' : '#rangeSel'); say('Dates: ' + rangeText() + '.'); return; }
+    if (t.id === 'rangeFrom' || t.id === 'rangeTo') { ui.range[t.id === 'rangeFrom' ? 'from' : 'to'] = t.value; ui.sel = {}; render('#' + t.id); say('Dates: ' + rangeText() + '.'); return; }
     if (t.id === 'colSel') {
-      var cv = t.value.split('-'); ui.col = t.value === 'date-asc' ? null : { key: cv[0], dir: cv[1] === 'desc' ? -1 : 1 };
+      var cv = t.value.split('-'); ui.col = t.value === 'date-desc' ? null : { key: cv[0], dir: cv[1] === 'desc' ? -1 : 1 };
       render('#colSel'); say('Sorted: ' + t.options[t.selectedIndex].text + '.'); return;
     }
     if (t.id === 'histSel' || t.id === 'histSel2') { ui.importOpen = false; ui.pending = null; ui.importMsg = null; ui.sel = {}; ui.notice = ''; ui.viewId = t.value || null; ui.filter = 'all'; render('#' + t.id); return; }
