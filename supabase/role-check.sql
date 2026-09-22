@@ -40,6 +40,12 @@ select set_config('request.jwt.claim.sub', (select user_id::text from members wh
        set_config('request.jwt.claims', json_build_object('sub', (select user_id from members where role = 'jeff' limit 1), 'role', 'authenticated')::text, false);
 set role authenticated;
 insert into results select 'jeff sees only his item', '1', count(*)::text from items where request_id = '00000000-0000-0000-0000-0000000000a1';
+insert into results select 'jeff can see the bookkeeper''s name and role too, not just his own', '1', count(*)::text from members where role = 'bookkeeper';
+do $$ declare n int; begin
+  update members set first_name = 'Hacked' where role = 'client';
+  get diagnostics n = row_count;
+  insert into results values ('jeff cannot change anyone''s name directly', '0', n::text);
+end $$;
 do $$ declare n int; begin
   update items set status = 'hubdoc', note = 'uploaded' where fingerprint = 'rolecheck-2';
   get diagnostics n = row_count;
@@ -269,6 +275,11 @@ do $$ declare n int; begin
   get diagnostics n = row_count;
   insert into results values ('the client can delete a transaction', '1', n::text);
 end $$;
+do $$ declare n int; begin
+  update members set first_name = 'Hacked' where role = 'bookkeeper';
+  get diagnostics n = row_count;
+  insert into results values ('the client cannot change a name directly either (only through /api/team)', '0', n::text);
+end $$;
 reset role;
 
 -- ---------- NOT SIGNED IN: nothing ----------
@@ -285,6 +296,12 @@ do $$ declare n int; begin
   insert into results values ('a visitor who is not signed in sees no messages', '0', n::text);
 exception when others then
   insert into results values ('a visitor who is not signed in sees no messages', '0', '0');
+end $$;
+do $$ declare n int; begin
+  select count(*) into n from members;
+  insert into results values ('a visitor who is not signed in sees no names either', '0', n::text);
+exception when others then
+  insert into results values ('a visitor who is not signed in sees no names either', '0', '0');
 end $$;
 reset role;
 

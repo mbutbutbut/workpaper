@@ -60,12 +60,16 @@ Run `supabase/review.sql` once in the SQL editor (after `schema.sql`). It adds t
 
 Run `supabase/messages.sql` once (after `review.sql`). It lets people edit or remove their own messages (removed ones keep a "Message removed" placeholder) and lets the admin delete transactions; deleting a transaction also deletes its conversation.
 
+### 4e. Real names
+
+Run `supabase/member-names.sql` once (after `schema.sql`; any time relative to the others). It adds a first and last name to each person, and lets everyone signed in see everyone's name and role, so the app can show "Jeff" or whoever holds that role today instead of the generic word "Team". Add names for existing people in the Team screen ("Edit name"); new people get a name when you add them.
+
 ## 5. Check the rules
 
-Paste `supabase/role-check.sql` into the SQL editor and run it (after `review.sql` and `messages.sql`). It acts as each person in turn, using the same database rules the app uses, then shows a PASS/FAIL table. Every row must say PASS, and it deletes its own test data.
+Paste `supabase/role-check.sql` into the SQL editor and run it (after `review.sql`, `messages.sql` and `member-names.sql`). It acts as each person in turn, using the same database rules the app uses, then shows a PASS/FAIL table. Every row must say PASS, and it deletes its own test data.
 
 Then confirm in the real app, signed in as each person:
-- Jeff sees only his items and can change only status and note.
+- The team member sees only their own items and can change only status and note.
 - The bookkeeper sees everything and can change nothing.
 - You can import, reassign and edit.
 
