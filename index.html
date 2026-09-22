@@ -99,7 +99,6 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .tabs { display: flex; flex-wrap: wrap; gap: 4px; }
 .tabs button { border: 0; background: transparent; padding: 7px 12px; font-weight: 500; color: var(--ink-soft); border-bottom: 2px solid transparent; }
 .tabs button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
-.sortlbl { font-size: 14px; color: var(--ink-soft); display: inline-flex; gap: 8px; align-items: center; }
 
 /* ledger table */
 .ledger { width: 100%; }
@@ -265,8 +264,6 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .preview .bad { color: var(--red); font-weight: 600; }
 
 /* history + review */
-.histbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 14px; color: var(--ink-soft); }
-.histbar select { border: 1px solid var(--ink-soft); background: var(--paper); padding: 6px 8px; border-radius: 3px; font-size: 14px; min-height: 34px; }
 .pastbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 10px 14px; margin-bottom: 8px; background: var(--blue-wash); border: 1px solid var(--blue); border-radius: 3px; font-weight: 500; }
 .review { margin-top: 14px; padding-top: 14px; border-top: 3px double var(--rule-strong); }
 .review h3 { margin: 0 0 8px; font-size: 1.05rem; }
@@ -336,14 +333,11 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 /* filters & sort: inline on desktop, one disclosure on phones */
 .fs-toggle { display: none; }
 .fs-panel { display: contents; }
-.reqsel { display: none; }
 @media (max-width: 760px) {
-  .histbar { display: none; }
   .fs-toggle { display: inline-flex; align-items: center; }
   .fs-panel { display: none; width: 100%; gap: 10px; padding: 10px 0 4px; }
   .fs-panel.open { display: grid; }
-  .reqsel { display: inline-flex; }
-  .fs-panel .sortsel, .fs-panel .sortlbl { width: 100%; justify-content: space-between; }
+  .fs-panel .sortsel { width: 100%; justify-content: space-between; }
   .fs-panel select { max-width: 60%; }
 }
 
@@ -420,15 +414,27 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .bulkbar button.dangerbtn { border-color: var(--red-on-ink); background: var(--red-on-ink); color: var(--ink); }
 .bulkbar button.dangerbtn:hover { background: #ffffff; }
 
+/* simpler header: title switcher, counted tabs, one quiet dates control */
+.toolbar { border-top: 3px double var(--rule-strong); }
+.tabs button { display: inline-flex; align-items: center; gap: 6px; }
+.tabs .tg { display: inline-flex; }
+.tabs .tg svg { width: 16px; height: 16px; }
+.tabs .tn { color: var(--ink-soft); font-weight: 500; }
+.tabs button[aria-pressed="true"] .tn { color: var(--ink); }
+.rangebox { display: inline-flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.rangecount { font-size: 14px; color: var(--ink-soft); }
 /* date range */
 .rangesel, .rangecustom label { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-soft); }
 .rangesel select, .rangecustom input { border: 1px solid var(--ink-soft); background: var(--paper); border-radius: 3px; padding: 6px 8px; }
 .rangecustom { display: inline-flex; gap: 12px; flex-wrap: wrap; }
-.rangenote { margin: 0 0 8px; font-size: 14px; color: var(--ink-soft); }
-.rangenote b { color: var(--ink); font-weight: 600; }
 @media (max-width: 760px), (pointer: coarse) {
   .rangesel select, .rangecustom input { min-height: 44px; font-size: 16px; }
   .rangecustom { width: 100%; }
+  .tabs .tg { display: none; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex: none; white-space: nowrap; }
+  .rangebox { width: 100%; }
 }
 
 /* adapt: phone and touch comfort */
@@ -441,7 +447,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   .thbtn { height: 44px; min-width: 44px; }
   .btn.small { padding-block: 8px; }
   .link { display: inline-flex; align-items: center; padding: 0 4px; }
-  .row .owner select, #histSel, #histSel2, #colSel { min-height: 44px; }
+  .row .owner select, #colSel { min-height: 44px; }
   .note-in { min-height: 44px; }
   .tickbtn { width: 44px; height: 44px; margin: -8px 0 0 -8px; }
   .sel { min-height: 44px; margin: -10px -8px -6px; padding-top: 12px; }
@@ -596,7 +602,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   var state = useRemote ? { comments: {}, items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || (function () { var it = sample(); return { items: it, comments: sampleComments(it), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null }; })();
   if (!state.history) state.history = [];
   if (!state.comments) state.comments = {};
-  var ui = { range: { key: 'fy', from: '', to: '' }, editMsg: null, removeMsg: null, bulkDelete: false, threadFor: null, threadErr: '', draft: {}, teamOpen: false, team: { people: null, msg: null, draft: { email: '', role: 'jeff', password: '' }, confirmRemove: null, resetFor: null, busy: false }, accountOpen: false, acctMsg: null, busy: false, fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', sort: 'number', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
+  var ui = { range: { key: 'fy', from: '', to: '' }, editMsg: null, removeMsg: null, bulkDelete: false, threadFor: null, threadErr: '', draft: {}, teamOpen: false, team: { people: null, msg: null, draft: { email: '', role: 'jeff', password: '' }, confirmRemove: null, resetFor: null, busy: false }, accountOpen: false, acctMsg: null, busy: false, fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function save() { invalidate(); if (useRemote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -622,11 +628,6 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     return (n < 0 ? '\u2212$' : '$') + t;
   }
 
-  function counts() {
-    var c = { waiting: 0, hubdoc: 0, jeff: 0, missing: 0, explained: 0 };
-    viewItems().forEach(function (i) { c[i.status]++; });
-    return c;
-  }
 
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   // Reads MM/DD/YYYY (the accounting export), ISO dates, and "Mar 02" style; swaps to DD/MM when the first part cannot be a month.
@@ -655,8 +656,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function lastDay(y, m) { return new Date(y, m, 0).getDate(); }
   // Returns { from, to } as yyyymmdd numbers (either can be null), or null for "all dates".
-  function rangeBounds() {
-    var r = ui.range, now = new Date(), y = now.getFullYear(), m = now.getMonth() + 1;
+  function rangeBounds(r) {
+    r = r || ui.range; var now = new Date(), y = now.getFullYear(), m = now.getMonth() + 1;
     if (r.key === 'all') return null;
     if (r.key === 'fy' || r.key === 'lastfy') {
       var sy = (m >= FY_START ? y : y - 1) - (r.key === 'lastfy' ? 1 : 0);
@@ -685,16 +686,18 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (b.from == null && b.to == null) return 'All dates';
     return (b.from != null ? fmtKey(b.from) : 'Earliest') + ' – ' + (b.to != null ? fmtKey(b.to) : 'latest');
   }
-  function rangeSelect() {
-    var r = ui.range;
-    return '<label class="rangesel">Dates <select id="rangeSel">' + RANGE_OPTS.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === r.key ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
-      (r.key === 'custom' ? '<span class="rangecustom"><label>From <input type="date" id="rangeFrom" value="' + esc(r.from) + '"></label><label>To <input type="date" id="rangeTo" value="' + esc(r.to) + '"></label></span>' : '');
+  function shortKey(k) { return MONTHS[(Math.floor(k / 100) % 100) - 1].slice(0, 3) + ' ' + Math.floor(k / 10000); }
+  function optLabel(o) {
+    var b = o[0] === 'all' || o[0] === 'custom' ? null : rangeBounds({ key: o[0] });
+    if (!b) return o[1];
+    return o[1] + (o[0] === 'month' || o[0] === 'lastmonth' ? ' (' + shortKey(b.from) + ')' : ' (' + shortKey(b.from) + ' – ' + shortKey(b.to) + ')');
   }
-  function rangeNote() {
-    var b = rangeBounds(), all = rawItems().length, n = viewItems().length;
-    if (!b) return '';
-    return '<p class="rangenote" role="status">Showing <b>' + esc(rangeText()) + '</b> · <span class="num">' + n + '</span> of <span class="num">' + all + '</span> transactions' +
-      (n < all ? ' <button type="button" class="link" data-act="showall">Show all dates</button>' : '') + '</p>';
+  // "Dates" is one quiet control; the count only appears when the range is hiding some transactions.
+  function rangeSelect() {
+    var r = ui.range, b = rangeBounds(), all = rawItems().length, n = viewItems().length;
+    return '<span class="rangebox"><label class="rangesel">Dates <select id="rangeSel">' + RANGE_OPTS.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === r.key ? ' selected' : '') + '>' + esc(optLabel(o)) + '</option>'; }).join('') + '</select></label>' +
+      (b && n < all ? '<span class="rangecount"><span class="num">' + n + '</span> of <span class="num">' + all + '</span> <button type="button" class="link" data-act="showall">Show all</button></span>' : '') +
+      (r.key === 'custom' ? '<span class="rangecustom"><label>From <input type="date" id="rangeFrom" value="' + esc(r.from) + '"></label><label>To <input type="date" id="rangeTo" value="' + esc(r.to) + '"></label></span>' : '') + '</span>';
   }
   function monthKey(it) { var d = parseDate(it.date); return d ? d.y * 100 + d.m : 999999; }
   function dayKey(it) { var d = parseDate(it.date); return d ? d.d : 99; }
@@ -707,7 +710,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   // Newest first by default, months and days alike. Rows with no date go last. Choosing 'oldest first' flips it.
   function sorted(list) {
     var rank = { waiting: 0, jeff: 0, missing: 1, hubdoc: 2, explained: 2 };
-    var col = ui.col, byOpen = ui.sort === 'open';
+    var col = ui.col, byOpen = false;
     var asc = !!(col && col.key === 'date' && col.dir === 1);
     // Read each date and amount once, not on every comparison.
     var rows = list.map(function (it) {
@@ -735,6 +738,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     return list.filter(function (i) {
       if (ui.filter === 'open') return STATUS[i.status].open;
       if (ui.filter === 'jeff') return i.owner === 'jeff';
+      if (ui.filter === 'missing') return i.status === 'missing';
       if (ui.filter === 'done') return !STATUS[i.status].open && i.status !== 'missing';
       if (ui.filter === 'review') return (i.status === 'hubdoc' || i.status === 'explained') && !i.reviewed;
       if (ui.filter === 'sentback') return !!i.sentBack;
@@ -754,28 +758,6 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       (useRemote ? '' : '<span class="plabel">Prototype, view as</span><span class="seg" role="group" aria-label="View as">' + seg + '</span>') +
       (useRemote && state.role === 'client' ? '<button type="button" class="link" data-act="team">Team</button>' : '') + (useRemote ? '<button type="button" class="link" data-act="account">Account</button>' : '') + '<button type="button" class="link" data-act="signout">Sign out</button></span></header>' +
       (ui.error ? '<div class="pastbar" role="alert" style="margin:8px var(--pad) 0;background:var(--red-wash);border-color:var(--red)"><span>' + esc(ui.error) + '</span><button type="button" class="btn small" data-act="dismisserr">Dismiss</button></div>' : '');
-  }
-
-  function tally() {
-    var c = counts();
-    var open = c.waiting + c.jeff;
-    if (state.role === 'bookkeeper') {
-      var toReview = viewItems().filter(function (i) { return (i.status === 'hubdoc' || i.status === 'explained') && !i.reviewed; }).length;
-      return '<div class="tally" aria-label="Summary">' +
-        '<span>' + markReviewed() + '<b class="num">' + toReview + '</b> to review</span>' +
-        '<span>' + glyph('waiting') + '<b class="num">' + c.waiting + '</b> waiting on client</span>' +
-        '<span>' + glyph('jeff') + '<b class="num">' + c.jeff + '</b> with Jeff</span>' +
-        '<span>' + glyph('missing') + '<b class="num">' + c.missing + '</b> no document</span>' +
-        '<span>' + glyph('hubdoc') + '<b class="num">' + (c.hubdoc + c.explained) + '</b> done</span></div>';
-    }
-    var sentBackN = viewItems().filter(function (i) { return i.sentBack; }).length;
-    var parts = [
-      (sentBackN ? '<span>' + markReturn() + '<b class="num">' + sentBackN + '</b> sent back</span>' : ''),
-      '<span>' + glyph('waiting') + '<b class="num">' + open + '</b> open</span>',
-      '<span>' + glyph('missing') + '<b class="num">' + c.missing + '</b> no document</span>',
-      '<span>' + glyph('hubdoc') + '<b class="num">' + (c.hubdoc + c.explained) + '</b> done</span>'
-    ];
-    return '<div class="tally" aria-label="Summary">' + parts.join('') + '</div>';
   }
 
   function legend() {
@@ -819,25 +801,30 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   }
 
   // On phones the request switcher moves into the Filters & sort panel; desktop keeps it in the header.
-  function histCopy() {
-    if (!state.history.length) return '';
-    var opts = '<option value=""' + (!ui.viewId ? ' selected' : '') + '>Current: ' + esc(state.cycle) + '</option>' +
-      state.history.map(function (h) { return '<option value="' + h.id + '"' + (ui.viewId === h.id ? ' selected' : '') + '>' + esc(h.name) + '</option>'; }).join('');
-    return '<label class="sortsel reqsel">Request <select id="histSel2">' + opts + '</select></label>';
-  }
+  // The filter tabs are also the summary: each shows its tickmark and how many items it holds.
   function toolbar(showJeffTab) {
-    var tabs = [['all', 'All'], ['open', 'Open']];
-    if (showJeffTab) tabs.push(['jeff', 'With Jeff']);
-    if (state.role === 'client' && showJeffTab) tabs.push(['sentback', 'Sent back']);
-    if (state.role === 'bookkeeper') tabs.push(['review', 'To review']);
-    tabs.push(['done', 'Done']);
+    var v = viewItems(), bk = state.role === 'bookkeeper';
+    var open = v.filter(function (i) { return STATUS[i.status].open; }).length;
+    var n = {
+      all: v.length, open: open,
+      jeff: v.filter(function (i) { return i.owner === 'jeff'; }).length,
+      sentback: v.filter(function (i) { return i.sentBack; }).length,
+      review: v.filter(function (i) { return (i.status === 'hubdoc' || i.status === 'explained') && !i.reviewed; }).length,
+      missing: v.filter(function (i) { return i.status === 'missing'; }).length,
+      done: v.filter(function (i) { return !STATUS[i.status].open && i.status !== 'missing'; }).length
+    };
+    var tabs = [['all', 'All', ''], ['open', 'Open', glyph('waiting')]];
+    if (showJeffTab) tabs.push(['jeff', 'With Jeff', glyph('jeff')]);
+    if (state.role === 'client' && showJeffTab) tabs.push(['sentback', 'Sent back', markReturn()]);
+    if (bk) tabs.push(['review', 'To review', markReviewed()]);
+    tabs.push(['missing', 'No document', glyph('missing')]);
+    tabs.push(['done', 'Done', glyph('hubdoc')]);
+    var narrowed = rangeBounds() && viewItems().length < rawItems().length;
     return '<div class="toolbar"><div class="tabs" role="group" aria-label="Filter">' +
-      tabs.map(function (t) { return '<button type="button" data-filter="' + t[0] + '" aria-pressed="' + (ui.filter === t[0]) + '">' + t[1] + '</button>'; }).join('') +
+      tabs.map(function (t) { return '<button type="button" data-filter="' + t[0] + '" aria-pressed="' + (ui.filter === t[0]) + '">' + (t[2] ? '<span class="tg" aria-hidden="true">' + t[2] + '</span>' : '') + t[1] + ' <span class="num tn">' + n[t[0]] + '</span></button>'; }).join('') +
       '</div>' + (showJeffTab ? selectAllBtn() : '') +
-      '<button type="button" class="btn small fs-toggle" data-act="togglefs" aria-expanded="' + !!ui.fsOpen + '" aria-controls="fsPanel">Filters &amp; sort</button>' +
-      '<div class="fs-panel' + (ui.fsOpen ? ' open' : '') + '" id="fsPanel">' + histCopy() + rangeSelect() + sortSelect() + '<label class="sortlbl">Order <span class="seg" role="group" aria-label="Order">' +
-      '<button type="button" data-sort="number" aria-pressed="' + (ui.sort === 'number') + '">By number</button>' +
-      '<button type="button" data-sort="open" aria-pressed="' + (ui.sort === 'open') + '">Open first</button></span></label></div></div>' + rangeNote();
+      '<button type="button" class="btn small fs-toggle" data-act="togglefs" aria-expanded="' + !!ui.fsOpen + '" aria-controls="fsPanel">Dates &amp; sort' + (narrowed ? ' <span class="num">· ' + viewItems().length + ' of ' + rawItems().length + '</span>' : '') + '</button>' +
+      '<div class="fs-panel' + (ui.fsOpen ? ' open' : '') + '" id="fsPanel">' + rangeSelect() + sortSelect() + pastSelect() + '</div></div>';
   }
 
   /* ---------- login ---------- */
@@ -1159,11 +1146,25 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     }).join('') + '</div>';
   }
 
-  function histBar() {
+  // One live fact instead of static instructions: what the person would come back to check.
+  function clientSub(past) {
+    if (state.sample && !past) return 'Sample data. Replace it with an import.';
+    var n = viewItems().filter(function (i) { return i.owner === 'me' && STATUS[i.status].open; }).length;
+    return n ? n + (n === 1 ? ' item needs' : ' items need') + ' your attention.' : 'Everything is up to date.';
+  }
+  function bookkeeperSub() {
+    var n = viewItems().filter(function (i) { return (i.status === 'hubdoc' || i.status === 'explained') && !i.reviewed; }).length;
+    return n ? n + (n === 1 ? ' item is' : ' items are') + ' ready for your review.' : 'Nothing is waiting on you right now.';
+  }
+  // With more than one request, the title itself is the switcher (a native menu laid over the heading).
+  // The heading is the app's identity, not the current request; it stays put while the subtitle carries what's live.
+  function titleBlock(word) { return '<h1>' + word + '</h1>'; }
+  // Picking an old import is a Dates & sort task now, not part of the heading.
+  function pastSelect() {
     if (!state.history.length) return '';
-    var opts = '<option value=""' + (!ui.viewId ? ' selected' : '') + '>Current: ' + esc(state.cycle) + '</option>' +
+    var opts = '<option value=""' + (!ui.viewId ? ' selected' : '') + '>' + esc(state.cycle) + ' (current)</option>' +
       state.history.map(function (h) { return '<option value="' + h.id + '"' + (ui.viewId === h.id ? ' selected' : '') + '>' + esc(h.name) + '</option>'; }).join('');
-    return '<div class="histbar"><label for="histSel">Request</label><select id="histSel">' + opts + '</select></div>';
+    return '<label class="rangesel pastsel">Import <select id="histSel">' + opts + '</select></label>';
   }
   function pastBar() {
     var p = pastView();
@@ -1174,15 +1175,15 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var past = pastView();
     var items = viewItems();
     var hasItems = rawItems().length > 0;
-    var head = '<div class="sheet-head"><div><h1>' + esc(viewName()) + '</h1><p>From ' + esc(state.from) + (state.sample && !past ? '. Sample data, replace it with an import.' : '.') + '</p></div>' +
-      '<div style="display:grid;gap:10px;justify-items:end">' + '<button type="button" class="btn primary" data-act="openimport">Import request</button>' + histBar() + '</div></div>';
+    var head = '<div class="sheet-head"><div>' + titleBlock('Workpaper') + '<p>' + esc(clientSub(past)) + '</p></div>' +
+      '<button type="button" class="btn primary" data-act="openimport">Import request</button></div>';
     var body;
     if (!hasItems) {
       body = '<div class="empty"><h2>No request yet</h2><p>Import the spreadsheet your bookkeeper emailed. Each row becomes an item you can tick off, note, or pass to Jeff.</p><button type="button" class="btn primary" data-act="openimport">Import request</button></div>';
     } else {
       var shownIds = {}; shownItems().forEach(function (i) { shownIds[i.id] = 1; });
       Object.keys(ui.sel).forEach(function (k) { if (!shownIds[k] || past) delete ui.sel[k]; });
-      body = pastBar() + tally() + (past ? '' : bulkBar()) + toolbar(!past) + ledger(shownItems(), past ? 'bk' : 'client');
+      body = pastBar() + (past ? '' : bulkBar()) + toolbar(!past) + ledger(shownItems(), past ? 'bk' : 'client');
     }
     return strip() + '<main id="main" tabindex="-1">' + head + (ui.importOpen ? importPanel() : '') + body + '</main>' + (hasItems ? legend() : '');
   }
@@ -1190,9 +1191,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   /* ---------- bookkeeper ---------- */
   function renderBookkeeper() {
     var past = pastView();
-    var head = '<div class="sheet-head"><div><h1>' + esc(viewName()) + '</h1><p>Review what has been resolved. Accept it, or send it back with a reason. It updates as they work.</p></div>' + histBar() + '</div>';
+    var head = '<div class="sheet-head"><div>' + titleBlock('Workpaper') + '<p>' + esc(bookkeeperSub()) + '</p></div></div>';
     if (!rawItems().length) return strip() + '<main id="main" tabindex="-1">' + head + '<div class="empty"><h2>Nothing to show yet</h2><p>The client has not imported this request.</p></div></main>';
-    return strip() + '<main id="main" tabindex="-1">' + head + pastBar() + tally() + toolbar(false) + ledger(shownItems(), 'bk') + '</main>' + legend();
+    return strip() + '<main id="main" tabindex="-1">' + head + pastBar() + toolbar(false) + ledger(shownItems(), 'bk') + '</main>' + legend();
   }
 
   /* ---------- jeff ---------- */
@@ -1447,7 +1448,6 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       render(); return;
     }
     state.user = session.user.email; state.uid = session.user.id; state.role = m.data.role; ui.authError = '';
-    ui.sort = state.role === 'bookkeeper' ? 'open' : 'number';
     await loadRemote();
     remote.channel('items-live').on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, scheduleReload).on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, scheduleReload).subscribe();
   }
@@ -1647,7 +1647,6 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     }
     if (d.act === 'togglefs') { ui.fsOpen = !ui.fsOpen; render('[data-act="togglefs"]'); return; }
     if (d.filter) { ui.filter = d.filter; render(); var nShown = shownItems().length; say('Showing ' + nShown + (nShown === 1 ? ' item.' : ' items.')); return; }
-    if (d.sort) { ui.sort = d.sort; render(); say(d.sort === 'open' ? 'Open items first.' : 'In date order.'); return; }
     if (d.menu) { ui.menuFor = ui.menuFor === d.menu ? null : d.menu; render(ui.menuFor ? '.menu button[aria-checked="true"]' : '[data-menu="' + d.menu + '"]'); return; }
     if (d.set) { var p = d.set.split(':'); setStatus(p[0], p[1], false); render('[data-menu="' + p[0] + '"]'); return; }
     if (d.jset) {
@@ -1719,7 +1718,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       var cv = t.value.split('-'); ui.col = t.value === 'date-desc' ? null : { key: cv[0], dir: cv[1] === 'desc' ? -1 : 1 };
       render('#colSel'); say('Sorted: ' + t.options[t.selectedIndex].text + '.'); return;
     }
-    if (t.id === 'histSel' || t.id === 'histSel2') { ui.importOpen = false; ui.pending = null; ui.importMsg = null; ui.sel = {}; ui.notice = ''; ui.viewId = t.value || null; ui.filter = 'all'; render('#' + t.id); return; }
+    if (t.id === 'histSel') { ui.importOpen = false; ui.pending = null; ui.importMsg = null; ui.sel = {}; ui.notice = ''; ui.viewId = t.value || null; ui.filter = 'all'; render('#' + t.id); return; }
     if (t.id === 'csvFile' && t.files[0]) {
       var f = t.files[0], fr = new FileReader();
       if (/\.(xlsx|xls)$/i.test(f.name)) {

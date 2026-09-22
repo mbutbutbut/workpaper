@@ -1,4 +1,6 @@
 .impeccable/
-.claude/
+.claude/*
+!.claude/skills
+!.claude/skills/**
 .DS_Store
 .vercel
