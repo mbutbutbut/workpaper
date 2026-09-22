@@ -21,10 +21,17 @@ create policy items_update on items for update to authenticated
   with check (my_role() = 'client' or (my_role() = 'jeff' and owner = 'jeff' and assignee_id = auth.uid()));
 
 -- A team member may still change only status and note -- not who the item is assigned to.
+-- This re-creates items_guard whole, so it must carry forward review.sql's review-mark
+-- protection and its "a new resolution clears the review marks" step too, not just add
+-- assignee_id to the older, simpler version from schema.sql.
 create or replace function items_guard() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   new.updated_at = now();
+  if (new.reviewed is distinct from old.reviewed or new.sent_back is distinct from old.sent_back)
+     and coalesce(current_setting('app.review_fn', true), '') <> 'on' then
+    raise exception 'Review marks change only through accept and reopen';
+  end if;
   if my_role() = 'jeff' then
     if (new.request_id, new.no, new.item_date, new.description, new.memo, new.amount, new.source, new.fingerprint, new.owner, new.assignee_id)
        is distinct from
@@ -34,6 +41,10 @@ begin
     if new.status not in ('jeff', 'hubdoc', 'missing', 'explained') then
       raise exception 'That status is not theirs to set';
     end if;
+  end if;
+  if new.status is distinct from old.status and new.status <> 'waiting' then
+    new.reviewed := false;
+    new.sent_back := false;
   end if;
   return new;
 end $$;
