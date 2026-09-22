@@ -357,6 +357,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 .people .you { color: var(--ink-soft); }
 .people .tacts { white-space: nowrap; }
 .people .tacts input { width: 170px; min-height: 36px; padding: 4px 8px; border: 1px solid var(--ink-soft); border-radius: 3px; background: var(--field); }
+.people td input[id^="fn"], .people td input[id^="ln"] { width: 110px; min-height: 36px; padding: 4px 8px; border: 1px solid var(--ink-soft); border-radius: 3px; background: var(--field); margin-right: 6px; }
+.people .noname { color: var(--ink-soft); font-style: italic; }
 .people select, .team select { min-height: 40px; padding: 6px 8px; border: 1px solid var(--ink-soft); border-radius: 3px; background: var(--field); }
 .people .ask { font-weight: 600; margin-right: 6px; }
 .btn.danger { background: var(--red); border-color: var(--red); color: var(--field); }
@@ -602,7 +604,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   var state = useRemote ? { comments: {}, items: [], history: [], cycle: '', from: 'the bookkeeper', sample: false, user: null, role: null } : load() || (function () { var it = sample(); return { items: it, comments: sampleComments(it), history: sampleHistory(), cycle: 'March request', from: 'Sample Bookkeeping', sample: true, user: null, role: null }; })();
   if (!state.history) state.history = [];
   if (!state.comments) state.comments = {};
-  var ui = { range: { key: 'fy', from: '', to: '' }, editMsg: null, removeMsg: null, bulkDelete: false, threadFor: null, threadErr: '', draft: {}, teamOpen: false, team: { people: null, msg: null, draft: { email: '', role: 'jeff', password: '' }, confirmRemove: null, resetFor: null, busy: false }, accountOpen: false, acctMsg: null, busy: false, fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
+  var ui = { range: { key: 'fy', from: '', to: '' }, editMsg: null, removeMsg: null, bulkDelete: false, threadFor: null, threadErr: '', draft: {}, teamOpen: false, team: { people: null, msg: null, draft: { email: '', role: 'jeff', firstName: '', lastName: '', password: '' }, renameFor: null, confirmRemove: null, resetFor: null, busy: false }, accountOpen: false, acctMsg: null, busy: false, fsOpen: false, sel: {}, bulkExplain: false, bulkErr: false, notice: '', col: null, loading: useRemote, error: '', filter: 'all', importOpen: false, menuFor: null, drawId: null, importMsg: null, pending: null, viewId: null };
 
   function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
   function save() { invalidate(); if (useRemote) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -618,6 +620,19 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
 
   var ROLE_LABEL = { client: 'Admin', jeff: 'Team member', bookkeeper: 'Bookkeeper' };
   var ROLE_EMAIL = { client: 'you@example.com', jeff: 'jeff@example.com', bookkeeper: 'books@example.com' };
+  // Real first/last names, keyed by user id (remote mode only; the prototype has no accounts to name).
+  state.names = state.names || {};
+  function personName(userId) {
+    var m = state.names[userId];
+    return m && m.first ? (m.first + ' ' + m.last).trim() : null;
+  }
+  // The first named person holding a role, e.g. whoever is the current "Team member". Falls back to
+  // the role label itself when no one has a name set yet (a brand-new account, or the prototype).
+  function nameForRole(role) {
+    var found = null;
+    Object.keys(state.names).some(function (id) { if (state.names[id].role === role) { found = state.names[id]; return true; } return false; });
+    return found && found.first ? (found.first + ' ' + found.last).trim() : null;
+  }
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function money(a) {
@@ -752,7 +767,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var seg = ['client', 'jeff', 'bookkeeper'].map(function (r) {
       return '<button type="button" data-role="' + r + '" aria-pressed="' + (role === r) + '">' + ROLE_LABEL[r] + '</button>';
     }).join('');
-    var who = useRemote ? state.user : ROLE_EMAIL[role];
+    var who = useRemote ? (personName(state.uid) || state.user) : ROLE_EMAIL[role];
     return '<header class="strip' + (useRemote ? '' : ' proto') + '"><span class="who">Signed in as <strong>' + esc(who) + '</strong> &middot; ' + ROLE_LABEL[role] + '</span>' +
       '<span style="display:inline-flex;gap:12px;align-items:center;flex-wrap:wrap">' +
       (useRemote ? '' : '<span class="plabel">Prototype, view as</span><span class="seg" role="group" aria-label="View as">' + seg + '</span>') +
@@ -873,24 +888,31 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   }
   function teamPanel() {
     var t = ui.team, rows = '';
-    if (!t.people) rows = '<tr><td colspan="3">' + (t.busy ? 'Loading the team\u2026' : 'The team could not be loaded.') + '</td></tr>';
+    if (!t.people) rows = '<tr><td colspan="4">' + (t.busy ? 'Loading the team\u2026' : 'The team could not be loaded.') + '</td></tr>';
     else rows = t.people.map(function (p) {
       var who = esc(p.email) + (p.you ? ' <span class="you">(you)</span>' : '');
+      var name = t.renameFor === p.id
+        ? '<label class="sr" for="fn' + p.id + '">First name</label><input id="fn' + p.id + '" type="text" autocomplete="off" placeholder="First name" value="' + esc(t.draft.firstName) + '">' +
+          '<label class="sr" for="ln' + p.id + '">Last name</label><input id="ln' + p.id + '" type="text" autocomplete="off" placeholder="Last name" value="' + esc(t.draft.lastName) + '">'
+        : (esc((p.firstName + ' ' + p.lastName).trim()) || '<span class="noname">No name yet</span>');
       var role = p.you ? '<span>' + ROLE_LABEL[p.role] + '</span>' :
         '<label class="sr" for="role' + p.id + '">Role for ' + esc(p.email) + '</label><select id="role' + p.id + '" data-teamrole="' + p.id + '">' + (p.role ? '' : '<option value="" selected>No role</option>') + roleOptions(p.role) + '</select>';
       var acts = '';
-      if (p.you) acts = '';
+      if (t.renameFor === p.id) acts = '<button type="button" class="btn small primary" data-teamdo="saverename:' + p.id + '">Save</button> <button type="button" class="btn small" data-teamdo="cancel">Cancel</button>';
+      else if (p.you) acts = '<button type="button" class="btn small" data-teamdo="rename:' + p.id + '">Edit name</button>';
       else if (t.confirmRemove === p.id) acts = '<span class="ask">Remove ' + esc(p.email) + '?</span> <button type="button" class="btn small danger" data-teamdo="remove:' + p.id + '">Remove</button> <button type="button" class="btn small" data-teamdo="cancel">Cancel</button>';
       else if (t.resetFor === p.id) acts = '<label class="sr" for="rp' + p.id + '">New password for ' + esc(p.email) + '</label><input id="rp' + p.id + '" type="text" autocomplete="off" placeholder="New password" minlength="10"> <button type="button" class="btn small" data-teamdo="genreset:' + p.id + '">Generate</button> <button type="button" class="btn small primary" data-teamdo="savereset:' + p.id + '">Save</button> <button type="button" class="btn small" data-teamdo="cancel">Cancel</button>';
-      else acts = '<button type="button" class="btn small" data-teamdo="reset:' + p.id + '">Reset password</button> <button type="button" class="btn small" data-teamdo="ask:' + p.id + '">Remove</button>';
-      return '<tr><td>' + who + '</td><td>' + role + '</td><td class="tacts">' + acts + '</td></tr>';
+      else acts = '<button type="button" class="btn small" data-teamdo="rename:' + p.id + '">Edit name</button> <button type="button" class="btn small" data-teamdo="reset:' + p.id + '">Reset password</button> <button type="button" class="btn small" data-teamdo="ask:' + p.id + '">Remove</button>';
+      return '<tr><td>' + who + '</td><td>' + name + '</td><td>' + role + '</td><td class="tacts">' + acts + '</td></tr>';
     }).join('');
     var d = t.draft;
     return '<section class="import team" aria-labelledby="teamH"><h2 id="teamH">Team</h2>' +
       '<p>Add people, change what they can do, or remove them. Give each person their first password yourself. They can change it under Account.</p>' +
       (t.msg ? '<p class="' + t.msg.kind + '" role="alert">' + esc(t.msg.text) + '</p>' : '') +
-      '<div class="tscroll"><table class="people"><thead><tr><th>Email</th><th>Role</th><th><span class="sr">Actions</span></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div class="tscroll"><table class="people"><thead><tr><th>Email</th><th>Name</th><th>Role</th><th><span class="sr">Actions</span></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
       '<h3>Add a person</h3><form id="addForm"><div class="addgrid">' +
+      '<div><label for="addFirst">First name</label><input id="addFirst" type="text" autocomplete="off" required value="' + esc(d.firstName) + '"></div>' +
+      '<div><label for="addLast">Last name</label><input id="addLast" type="text" autocomplete="off" required value="' + esc(d.lastName) + '"></div>' +
       '<div><label for="addEmail">Email</label><input id="addEmail" type="email" autocomplete="off" required value="' + esc(d.email) + '"></div>' +
       '<div><label for="addRole">Role</label><select id="addRole">' + roleOptions(d.role) + '</select></div>' +
       '<div><label for="addPw">First password</label><input id="addPw" type="text" autocomplete="off" minlength="10" required value="' + esc(d.password) + '"></div></div>' +
@@ -1051,7 +1073,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var items = list.length ? list.map(function (m) {
       var tag = m.kind === 'reopen' ? '<span class="mtag">Sent back</span>' : m.kind === 'accept' ? '<span class="mtag ok">Accepted</span>' : '';
       var when = '<time datetime="' + esc(m.at) + '">' + esc(fmtTime(m.at)) + '</time>' + (m.edited && !m.removed ? '<span class="edited">edited</span>' : '');
-      var head = '<div class="mhd"><b>' + esc(ROLE_LABEL[m.role] || m.role) + '</b> ' + tag + when + '</div>';
+      var head = '<div class="mhd"><b>' + esc((useRemote && personName(m.author)) || ROLE_LABEL[m.role] || m.role) + '</b> ' + tag + when + '</div>';
       if (m.removed) return '<li class="msg gone">' + head + '<p class="removed">Message removed</p></li>';
       if (ui.editMsg === m.id) {
         return '<li class="msg editing">' + head + '<label class="sr" for="editBody">Edit your message</label><textarea id="editBody" maxlength="1000" rows="3">' + esc(m.body) + '</textarea>' +
@@ -1086,9 +1108,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var meta = esc(item.date) + (item.amount ? ' · <span class="num">' + money(item.amount) + '</span>' : '') + (item.source ? ' · ' + esc(item.source) : '');
     var owner;
     if (mode === 'client') {
-      owner = '<div class="owner"><label class="sr" for="o' + item.id + '">Owner of item ' + item.no + '</label><select id="o' + item.id + '" data-owner="' + item.id + '"><option value="me"' + (item.owner === 'me' ? ' selected' : '') + '>Me</option><option value="jeff"' + (item.owner === 'jeff' ? ' selected' : '') + '>Team</option></select></div>';
+      owner = '<div class="owner"><label class="sr" for="o' + item.id + '">Owner of item ' + item.no + '</label><select id="o' + item.id + '" data-owner="' + item.id + '"><option value="me"' + (item.owner === 'me' ? ' selected' : '') + '>Me</option><option value="jeff"' + (item.owner === 'jeff' ? ' selected' : '') + '>' + esc(nameForRole('jeff') || 'Team') + '</option></select></div>';
     } else {
-      owner = '<span class="ownertxt">' + (item.owner === 'jeff' ? 'Team' : 'Client') + '</span>';
+      owner = '<span class="ownertxt">' + esc(item.owner === 'jeff' ? (nameForRole('jeff') || 'Team') : (nameForRole('client') || 'Client')) + '</span>';
     }
     var note;
     if (mode === 'client') {
@@ -1414,12 +1436,15 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var got = await Promise.all([
       remote.from('requests').select('*').order('imported_at', { ascending: false }),
       fetchAll('items', 'no'),
-      fetchAll('comments', 'created_at')
+      fetchAll('comments', 'created_at'),
+      remote.from('members').select('user_id,role,first_name,last_name')
     ]);
     if (mine !== loadSeq) return; // a newer load is already on its way
-    var reqs = got[0], its = got[1], cm = got[2];
+    var reqs = got[0], its = got[1], cm = got[2], mem = got[3];
     if (reqs.error) return fail(reqs.error, 'Could not load requests.');
     if (its.error) return fail(its.error, 'Could not load items.');
+    state.names = {};
+    if (!mem.error) mem.data.forEach(function (m) { state.names[m.user_id] = { first: m.first_name, last: m.last_name, role: m.role }; });
     state.comments = {};
     if (!cm.error) cm.data.forEach(function (c) { (state.comments[c.fingerprint] = state.comments[c.fingerprint] || []).push({ id: c.id, role: c.role, kind: c.kind, body: c.body, at: c.created_at, author: c.author_id, edited: !!c.edited_at, removed: !!c.removed }); });
     var by = {};
@@ -1569,13 +1594,27 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         return;
       }
     }
-    if (d.act === 'team') { ui.teamOpen = !ui.teamOpen; ui.accountOpen = false; ui.team.msg = null; ui.team.confirmRemove = null; ui.team.resetFor = null; if (ui.teamOpen && !ui.team.people) loadTeam('#addEmail'); else render(ui.teamOpen ? '#addEmail' : '[data-act="team"]'); return; }
+    if (d.act === 'team') { ui.teamOpen = !ui.teamOpen; ui.accountOpen = false; ui.team.msg = null; ui.team.confirmRemove = null; ui.team.resetFor = null; ui.team.renameFor = null; if (ui.teamOpen && !ui.team.people) loadTeam('#addFirst'); else render(ui.teamOpen ? '#addFirst' : '[data-act="team"]'); return; }
     if (d.act === 'closeteam') { ui.teamOpen = false; ui.team.msg = null; render('[data-act="team"]'); return; }
     if (d.teamdo) {
       var parts = d.teamdo.split(':'), what = parts[0], pid = parts[1];
-      if (what === 'cancel') { ui.team.confirmRemove = null; ui.team.resetFor = null; render(); return; }
-      if (what === 'ask') { ui.team.confirmRemove = pid; ui.team.resetFor = null; render('[data-teamdo="remove:' + pid + '"]'); return; }
-      if (what === 'reset') { ui.team.resetFor = pid; ui.team.confirmRemove = null; render('#rp' + pid); return; }
+      if (what === 'cancel') { ui.team.confirmRemove = null; ui.team.resetFor = null; ui.team.renameFor = null; render(); return; }
+      if (what === 'ask') { ui.team.confirmRemove = pid; ui.team.resetFor = null; ui.team.renameFor = null; render('[data-teamdo="remove:' + pid + '"]'); return; }
+      if (what === 'reset') { ui.team.resetFor = pid; ui.team.confirmRemove = null; ui.team.renameFor = null; render('#rp' + pid); return; }
+      if (what === 'rename') {
+        var pp = (t.people || []).find(function (x) { return x.id === pid; }) || {};
+        ui.team.draft.firstName = pp.firstName || ''; ui.team.draft.lastName = pp.lastName || '';
+        ui.team.renameFor = pid; ui.team.confirmRemove = null; ui.team.resetFor = null; render('#fn' + pid); return;
+      }
+      if (what === 'saverename') {
+        var fn = ((document.getElementById('fn' + pid) || {}).value || '').trim(), ln = ((document.getElementById('ln' + pid) || {}).value || '').trim();
+        if (!fn || !ln) { ui.team.msg = { kind: 'err', text: 'Enter a first and last name.' }; render('#fn' + pid); return; }
+        ui.team.busy = true; render();
+        teamCall('setName', { id: pid, firstName: fn, lastName: ln }).then(function () { ui.team.renameFor = null; ui.team.msg = { kind: 'ok', text: 'Name updated.' }; return teamCall('list'); })
+          .then(function (r) { ui.team.people = r.people; ui.team.busy = false; announce('Name updated.'); render(); })
+          .catch(function (e) { ui.team.busy = false; ui.team.msg = { kind: 'err', text: e.message }; render('#fn' + pid); });
+        return;
+      }
       if (what === 'genreset') { var gp = makePassword(); render('#rp' + pid); document.getElementById('rp' + pid).value = gp; return; }
       if (what === 'genadd') { ui.team.draft.password = makePassword(); render('#addPw'); return; }
       if (what === 'remove') {
@@ -1678,6 +1717,8 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var id = e.target.id;
     if (id === 'threadBody' && ui.threadFor) { ui.draft[ui.threadFor] = e.target.value; ui.threadErr = ''; }
     if (id === 'addEmail') ui.team.draft.email = e.target.value;
+    else if (id === 'addFirst') ui.team.draft.firstName = e.target.value;
+    else if (id === 'addLast') ui.team.draft.lastName = e.target.value;
     else if (id === 'addPw') ui.team.draft.password = e.target.value;
   });
   app.addEventListener('change', function (e) {
@@ -1778,12 +1819,12 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       if (ui.team.busy) return;
       var dr = ui.team.draft;
       ui.team.busy = true; ui.team.msg = null; render();
-      teamCall('add', { email: dr.email, role: dr.role, password: dr.password }).then(function () {
-        ui.team.msg = { kind: 'ok', text: 'Added ' + dr.email + '. Tell them their first password: ' + dr.password };
-        ui.team.draft = { email: '', role: dr.role, password: '' };
+      teamCall('add', { email: dr.email, role: dr.role, password: dr.password, firstName: dr.firstName, lastName: dr.lastName }).then(function () {
+        ui.team.msg = { kind: 'ok', text: 'Added ' + dr.firstName + ' ' + dr.lastName + ' (' + dr.email + '). Tell them their first password: ' + dr.password };
+        ui.team.draft = { email: '', role: dr.role, firstName: '', lastName: '', password: '' };
         return teamCall('list');
-      }).then(function (r) { ui.team.people = r.people; ui.team.busy = false; announce('Person added.'); render('#addEmail'); })
-        .catch(function (err) { ui.team.busy = false; ui.team.msg = { kind: 'err', text: err.message }; render('#addEmail'); });
+      }).then(function (r) { ui.team.people = r.people; ui.team.busy = false; announce('Person added.'); render('#addFirst'); })
+        .catch(function (err) { ui.team.busy = false; ui.team.msg = { kind: 'err', text: err.message }; render('#addFirst'); });
       return;
     }
     if (e.target.id === 'pwForm') {

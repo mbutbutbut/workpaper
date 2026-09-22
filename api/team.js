@@ -70,12 +70,15 @@ module.exports = async function handler(req, res) {
     if (action === 'list') {
       const [u, m] = await Promise.all([
         sb(cfg, '/auth/v1/admin/users?per_page=200', 'GET'),
-        sb(cfg, '/rest/v1/members?select=user_id,role', 'GET')
+        sb(cfg, '/rest/v1/members?select=user_id,role,first_name,last_name', 'GET')
       ]);
       if (!u.ok || !m.ok) return send(res, 502, { error: 'Could not load the team.' });
-      const roles = {};
-      m.data.forEach((x) => { roles[x.user_id] = x.role; });
-      const people = (u.data.users || []).map((x) => ({ id: x.id, email: x.email, role: roles[x.id] || null, lastSignIn: x.last_sign_in_at || null, you: x.id === caller.id }));
+      const rows = {};
+      m.data.forEach((x) => { rows[x.user_id] = x; });
+      const people = (u.data.users || []).map((x) => {
+        const row = rows[x.id] || {};
+        return { id: x.id, email: x.email, role: row.role || null, firstName: row.first_name || '', lastName: row.last_name || '', lastSignIn: x.last_sign_in_at || null, you: x.id === caller.id };
+      });
       people.sort((a, b) => String(a.email).localeCompare(String(b.email)));
       return send(res, 200, { people });
     }
@@ -83,15 +86,18 @@ module.exports = async function handler(req, res) {
     if (action === 'add') {
       const email = String(input.email || '').trim().toLowerCase();
       const password = String(input.password || '');
+      const firstName = String(input.firstName || '').trim();
+      const lastName = String(input.lastName || '').trim();
       if (!EMAIL.test(email)) return send(res, 400, { error: 'Enter a valid email address.' });
       if (ROLES.indexOf(input.role) < 0) return send(res, 400, { error: 'Choose a role.' });
       if (password.length < 10) return send(res, 400, { error: 'The first password needs at least 10 characters.' });
+      if (!firstName || !lastName) return send(res, 400, { error: 'Enter a first and last name.' });
       const created = await sb(cfg, '/auth/v1/admin/users', 'POST', { email, password, email_confirm: true });
       if (!created.ok) {
         const taken = created.status === 422 || /already|registered|exists/i.test(JSON.stringify(created.data || ''));
         return send(res, taken ? 409 : 502, { error: taken ? 'That email already has an account.' : 'Could not create the account.' });
       }
-      const row = await sb(cfg, '/rest/v1/members', 'POST', { user_id: created.data.id, role: input.role }, { Prefer: 'return=minimal' });
+      const row = await sb(cfg, '/rest/v1/members', 'POST', { user_id: created.data.id, role: input.role, first_name: firstName, last_name: lastName }, { Prefer: 'return=minimal' });
       if (!row.ok) {
         await sb(cfg, '/auth/v1/admin/users/' + enc(created.data.id), 'DELETE');
         return send(res, 502, { error: 'Could not set the role, so nothing was created.' });
@@ -114,6 +120,15 @@ module.exports = async function handler(req, res) {
         const ins = await sb(cfg, '/rest/v1/members', 'POST', { user_id: id, role: input.role }, { Prefer: 'return=minimal' });
         if (!ins.ok) return send(res, 502, { error: 'Could not set the role.' });
       }
+      return send(res, 200, { ok: true });
+    }
+
+    if (action === 'setName') {
+      const firstName = String(input.firstName || '').trim();
+      const lastName = String(input.lastName || '').trim();
+      if (!firstName || !lastName) return send(res, 400, { error: 'Enter a first and last name.' });
+      const r = await sb(cfg, '/rest/v1/members?user_id=eq.' + enc(id), 'PATCH', { first_name: firstName, last_name: lastName }, { Prefer: 'return=minimal' });
+      if (!r.ok) return send(res, 502, { error: 'Could not change the name.' });
       return send(res, 200, { ok: true });
     }
 

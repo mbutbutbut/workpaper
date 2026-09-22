@@ -3,7 +3,7 @@ process.env.SUPABASE_URL = 'https://x.supabase.co'; process.env.SUPABASE_SECRET_
 let users, members, failMemberInsert;
 function reset() {
   users = [{ id: 'A1', email: 'admin@x.co' }, { id: 'J1', email: 'jeff@x.co' }, { id: 'B1', email: 'book@x.co' }];
-  members = [{ user_id: 'A1', role: 'client' }, { user_id: 'J1', role: 'jeff' }, { user_id: 'B1', role: 'bookkeeper' }];
+  members = [{ user_id: 'A1', role: 'client', first_name: 'Ann', last_name: 'Admin' }, { user_id: 'J1', role: 'jeff', first_name: 'Jeff', last_name: 'Jones' }, { user_id: 'B1', role: 'bookkeeper', first_name: 'Bea', last_name: 'Keeper' }];
   failMemberInsert = false;
 }
 const tokens = { 'tok-admin': 'A1', 'tok-jeff': 'J1' };
@@ -13,8 +13,8 @@ global.fetch = async (url, opts = {}) => {
   if (p === '/auth/v1/user') { const id = tokens[(opts.headers.Authorization || '').replace('Bearer ', '')]; return id ? json(200, { id }) : json(401, {}); }
   if (p === '/rest/v1/members') {
     if (m === 'GET') { let r = members; const uid = q.get('user_id'); const role = q.get('role'); if (uid) r = r.filter((x) => 'eq.' + x.user_id === uid); if (role) r = r.filter((x) => 'eq.' + x.role === role); return json(200, r.map((x) => ({ ...x }))); }
-    if (m === 'POST') { if (failMemberInsert) return json(500, {}); members.push({ user_id: body.user_id, role: body.role }); return json(201); }
-    if (m === 'PATCH') { const uid = q.get('user_id'); const hit = members.filter((x) => 'eq.' + x.user_id === uid); hit.forEach((x) => (x.role = body.role)); return json(200, hit); }
+    if (m === 'POST') { if (failMemberInsert) return json(500, {}); members.push({ user_id: body.user_id, role: body.role, first_name: body.first_name || '', last_name: body.last_name || '' }); return json(201); }
+    if (m === 'PATCH') { const uid = q.get('user_id'); const hit = members.filter((x) => 'eq.' + x.user_id === uid); hit.forEach((x) => Object.assign(x, body)); return json(200, hit); }
   }
   if (p === '/auth/v1/admin/users' && m === 'GET') return json(200, { users });
   if (p === '/auth/v1/admin/users' && m === 'POST') { if (users.some((x) => x.email === body.email)) return json(422, { msg: 'A user with this email address has already been registered' }); const id = 'N' + (users.length + 1); users.push({ id, email: body.email }); return json(200, { id, email: body.email }); }
@@ -41,11 +41,16 @@ function check(name, cond, extra) { if (cond) pass++; else { fail++; console.log
   r = await call('POST', 'tok-admin', { action: 'add', email: 'new@x.co', password: 'short', role: 'jeff' }); check('short pw', r.statusCode === 400);
   r = await call('POST', 'tok-admin', { action: 'add', email: 'not-an-email', password: 'longpassword1', role: 'jeff' }); check('bad email', r.statusCode === 400);
   r = await call('POST', 'tok-admin', { action: 'add', email: 'new@x.co', password: 'longpassword1', role: 'root' }); check('bad role', r.statusCode === 400);
-  r = await call('POST', 'tok-admin', { action: 'add', email: 'New@X.co', password: 'longpassword1', role: 'jeff' }); check('add ok', r.statusCode === 200 && users.some((u) => u.email === 'new@x.co') && members.some((m) => m.role === 'jeff' && m.user_id !== 'J1'), JSON.stringify(r.body));
-  r = await call('POST', 'tok-admin', { action: 'add', email: 'new@x.co', password: 'longpassword1', role: 'jeff' }); check('duplicate 409', r.statusCode === 409, JSON.stringify(r.body));
+  r = await call('POST', 'tok-admin', { action: 'add', email: 'noname@x.co', password: 'longpassword1', role: 'jeff' }); check('add without a name refused', r.statusCode === 400 && /name/i.test(r.body.error), JSON.stringify(r.body));
+  r = await call('POST', 'tok-admin', { action: 'add', email: 'New@X.co', password: 'longpassword1', role: 'jeff', firstName: 'New', lastName: 'Person' }); check('add ok', r.statusCode === 200 && users.some((u) => u.email === 'new@x.co') && members.some((m) => m.role === 'jeff' && m.user_id !== 'J1'), JSON.stringify(r.body));
+  r = await call('POST', 'tok-admin', { action: 'add', email: 'new@x.co', password: 'longpassword1', role: 'jeff', firstName: 'New', lastName: 'Person' }); check('duplicate 409', r.statusCode === 409, JSON.stringify(r.body));
   failMemberInsert = true; const before = users.length;
-  r = await call('POST', 'tok-admin', { action: 'add', email: 'rollback@x.co', password: 'longpassword1', role: 'jeff' }); check('role failure rolls back user', r.statusCode === 502 && users.length === before, JSON.stringify(r.body)); failMemberInsert = false;
+  r = await call('POST', 'tok-admin', { action: 'add', email: 'rollback@x.co', password: 'longpassword1', role: 'jeff', firstName: 'Roll', lastName: 'Back' }); check('role failure rolls back user', r.statusCode === 502 && users.length === before, JSON.stringify(r.body)); failMemberInsert = false;
   r = await call('POST', 'tok-admin', { action: 'setRole', id: 'A1', role: 'jeff' }); check('cannot change own role', r.statusCode === 400);
+  r = await call('POST', 'tok-admin', { action: 'setName', id: 'J1', firstName: 'Jeffrey', lastName: 'Jones' }); check('rename ok', r.statusCode === 200 && members.find((m) => m.user_id === 'J1').first_name === 'Jeffrey', JSON.stringify(r.body));
+  r = await call('POST', 'tok-admin', { action: 'setName', id: 'J1', firstName: '', lastName: 'Jones' }); check('rename needs both names', r.statusCode === 400);
+  r = await call('POST', 'tok-jeff', { action: 'setName', id: 'J1', firstName: 'X', lastName: 'Y' }); check('non-admin cannot rename', r.statusCode === 403);
+  r = await call('POST', 'tok-admin', { action: 'list' }); check('list includes names', r.statusCode === 200 && r.body.people.find((p) => p.id === 'J1').firstName === 'Jeffrey', JSON.stringify(r.body));
   r = await call('POST', 'tok-admin', { action: 'setRole', id: 'B1', role: 'client' }); check('promote to admin', r.statusCode === 200 && members.find((m) => m.user_id === 'B1').role === 'client');
   r = await call('POST', 'tok-admin', { action: 'setRole', id: 'B1', role: 'bookkeeper' }); check('demote second admin ok', r.statusCode === 200);
   reset();
