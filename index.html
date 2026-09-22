@@ -488,14 +488,14 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   var STATUS = {
     waiting:   { label: 'Waiting on me', cls: 't-waiting',   open: true,  path: '<circle class="g" cx="12" cy="12" r="7.5" pathLength="1" stroke-dasharray="0.07 0.055"/>' },
     hubdoc:    { label: 'In Hubdoc',     cls: 't-hubdoc',    open: false, path: '<path class="g" d="M4 13.5 L9.5 19 L20.5 5" pathLength="1"/>' },
-    jeff:      { label: 'With Jeff',     cls: 't-jeff',      open: true,  path: '<path class="g" d="M4 12 H18 M12.5 6 L18.5 12 L12.5 18" pathLength="1"/>' },
+    jeff:      { label: 'With team',     cls: 't-jeff',      open: true,  path: '<path class="g" d="M4 12 H18 M12.5 6 L18.5 12 L12.5 18" pathLength="1"/>' },
     missing:   { label: 'No document',    cls: 't-missing',   open: true,  path: '<path class="g" d="M6 6 L18 18 M18 6 L6 18" pathLength="1"/>' },
     explained: { label: 'Explained',     cls: 't-explained', open: false, path: '<path class="g" d="M5 9 H19 M5 15 H19" pathLength="1"/>' }
   };
   var ORDER = ['waiting', 'hubdoc', 'jeff', 'missing', 'explained'];
 
   // Status words per role. The glyph never changes; only the wording follows who is reading.
-  var SHORT = { waiting: 'Waiting', hubdoc: 'In Hubdoc', jeff: 'With Jeff', missing: 'No document', explained: 'Explained' };
+  var SHORT = { waiting: 'Waiting', hubdoc: 'In Hubdoc', jeff: 'With team', missing: 'No document', explained: 'Explained' };
   function roleLabel(k) {
     if (state.role === 'bookkeeper' && k === 'waiting') return 'Waiting on client';
     return STATUS[k].label;
@@ -553,7 +553,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       ['03/21/2026', 'Hardware store, trailer parts', '342.66', 'jeff', 'missing', "Paid cash at the counter, no receipt given.", 'Business card B'],
       ['03/22/2026', 'Software subscription', '39.00', 'me', 'hubdoc', ''],
       ['03/25/2026', 'Packaging supplier, shipping boxes', '188.40', 'me', 'waiting', ''],
-      ['03/27/2026', 'Cash withdrawal', '300.00', 'me', 'explained', "Paid for Jeff's day labour. No paperwork.", 'Chequing']
+      ['03/27/2026', 'Cash withdrawal', '300.00', 'me', 'explained', "Paid for the team member's day labour. No paperwork.", 'Chequing']
     ], 's');
   }
   // A small conversation so the prototype shows the review flow.
@@ -795,7 +795,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
         '<button type="button" data-bulk="explainsave">Save</button><button type="button" class="plain" data-bulk="explaincancel">Cancel</button></div></div>';
     }
     return '<div class="bulkbar" role="region" aria-label="Bulk actions"><span class="bcount">' + n + ' selected</span><div class="bacts">' +
-      '<button type="button" class="primary" data-bulk="tojeff">Give to Jeff</button>' +
+      '<button type="button" class="primary" data-bulk="tojeff">Give to team</button>' +
       '<button type="button" data-bulk="hubdoc">Mark In Hubdoc</button><button type="button" data-bulk="explain">Explain\u2026</button>' +
       '<button type="button" class="plain" data-bulk="takeback">Take back</button>' + (state.role === 'client' ? '<button type="button" class="plain" data-bulk="delete">Delete\u2026</button>' : '') + '<button type="button" class="plain" data-bulk="clear">Clear</button></div></div>';
   }
@@ -814,7 +814,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       done: v.filter(function (i) { return !STATUS[i.status].open && i.status !== 'missing'; }).length
     };
     var tabs = [['all', 'All', ''], ['open', 'Open', glyph('waiting')]];
-    if (showJeffTab) tabs.push(['jeff', 'With Jeff', glyph('jeff')]);
+    if (showJeffTab) tabs.push(['jeff', 'With team', glyph('jeff')]);
     if (state.role === 'client' && showJeffTab) tabs.push(['sentback', 'Sent back', markReturn()]);
     if (bk) tabs.push(['review', 'To review', markReviewed()]);
     tabs.push(['missing', 'No document', glyph('missing')]);
@@ -840,7 +840,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       (useRemote ? '<p class="forgot">Forgot your password? Ask the person who set up your account to reset it.</p>' : '') +
       (!useRemote && sent ? '<div class="proto"><p>Prototype only: no email is sent. Continue as:</p><div class="btns">' +
         '<button class="btn" data-signin="client">Client (full checklist)</button>' +
-        '<button class="btn" data-signin="jeff">Jeff (his items only)</button>' +
+        '<button class="btn" data-signin="jeff">Team member (their items only)</button>' +
         '<button class="btn" data-signin="bookkeeper">Bookkeeper (read-only)</button></div></div>' : '') +
       '</div></div>';
   }
@@ -1086,9 +1086,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var meta = esc(item.date) + (item.amount ? ' · <span class="num">' + money(item.amount) + '</span>' : '') + (item.source ? ' · ' + esc(item.source) : '');
     var owner;
     if (mode === 'client') {
-      owner = '<div class="owner"><label class="sr" for="o' + item.id + '">Owner of item ' + item.no + '</label><select id="o' + item.id + '" data-owner="' + item.id + '"><option value="me"' + (item.owner === 'me' ? ' selected' : '') + '>Me</option><option value="jeff"' + (item.owner === 'jeff' ? ' selected' : '') + '>Jeff</option></select></div>';
+      owner = '<div class="owner"><label class="sr" for="o' + item.id + '">Owner of item ' + item.no + '</label><select id="o' + item.id + '" data-owner="' + item.id + '"><option value="me"' + (item.owner === 'me' ? ' selected' : '') + '>Me</option><option value="jeff"' + (item.owner === 'jeff' ? ' selected' : '') + '>Team</option></select></div>';
     } else {
-      owner = '<span class="ownertxt">' + (item.owner === 'jeff' ? 'Jeff' : 'Client') + '</span>';
+      owner = '<span class="ownertxt">' + (item.owner === 'jeff' ? 'Team' : 'Client') + '</span>';
     }
     var note;
     if (mode === 'client') {
@@ -1132,7 +1132,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       var wJeff = g.items.filter(function (i) { return i.status === 'jeff'; }).length;
       var count = state.role === 'bookkeeper' ? '<span class="mcount">' +
         '<span>' + glyph('waiting') + wClient + ' on client</span>' +
-        '<span>' + glyph('jeff') + wJeff + ' with Jeff</span>' +
+        '<span>' + glyph('jeff') + wJeff + ' with team</span>' +
         (flag ? '<span>' + glyph('missing') + flag + ' no document</span>' : '') +
         '<span>' + glyph('hubdoc') + done + ' done</span></span>' : '<span class="mcount">' +
         '<span>' + glyph('waiting') + open + ' open</span>' +
@@ -1179,7 +1179,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       '<button type="button" class="btn primary" data-act="openimport">Import request</button></div>';
     var body;
     if (!hasItems) {
-      body = '<div class="empty"><h2>No request yet</h2><p>Import the spreadsheet your bookkeeper emailed. Each row becomes an item you can tick off, note, or pass to Jeff.</p><button type="button" class="btn primary" data-act="openimport">Import request</button></div>';
+      body = '<div class="empty"><h2>No request yet</h2><p>Import the spreadsheet your bookkeeper emailed. Each row becomes an item you can tick off, note, or pass to the team.</p><button type="button" class="btn primary" data-act="openimport">Import request</button></div>';
     } else {
       var shownIds = {}; shownItems().forEach(function (i) { shownIds[i.id] = 1; });
       Object.keys(ui.sel).forEach(function (k) { if (!shownIds[k] || past) delete ui.sel[k]; });
@@ -1468,7 +1468,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var items = selectedItems(), n = items.length, ids = items.map(function (i) { return i.id; }), msg = '';
     if (kind === 'tojeff') {
       items.forEach(function (i) { i.owner = 'jeff'; i.status = 'jeff'; i.reviewed = false; i.sentBack = false; });
-      pushMany(ids, { owner: 'jeff', status: 'jeff' }); msg = 'Gave ' + n + (n === 1 ? ' item' : ' items') + ' to Jeff.';
+      pushMany(ids, { owner: 'jeff', status: 'jeff' }); msg = 'Gave ' + n + (n === 1 ? ' item' : ' items') + ' to the team.';
     } else if (kind === 'takeback') {
       var back = items.filter(function (i) { return i.status === 'jeff'; }).map(function (i) { return i.id; });
       items.forEach(function (i) { i.owner = 'me'; if (i.status === 'jeff') i.status = 'waiting'; });
@@ -1703,10 +1703,10 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     if (t.dataset.owner) {
       var it = state.items.find(function (x) { return x.id === t.dataset.owner; });
       it.owner = t.value;
-      // Handing an item over is one action: it always lands as With Jeff, and taking it back reopens it.
+      // Handing an item over is one action: it always lands as With team, and taking it back reopens it.
       if (t.value === 'jeff' && it.status !== 'jeff') { it.status = 'jeff'; ui.drawId = it.id; }
       if (t.value === 'me' && it.status === 'jeff') { it.status = 'waiting'; ui.drawId = it.id; }
-      say('Item ' + it.no + (t.value === 'jeff' ? ' given to Jeff.' : ' taken back.')); save(); pushItem(it, { owner: it.owner, status: it.status }); render('#o' + it.id); return;
+      say('Item ' + it.no + (t.value === 'jeff' ? ' given to the team.' : ' taken back.')); save(); pushItem(it, { owner: it.owner, status: it.status }); render('#o' + it.id); return;
     }
     if (t.dataset.note) {
       var n = state.items.find(function (x) { return x.id === t.dataset.note; });
