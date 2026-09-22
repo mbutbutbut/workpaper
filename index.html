@@ -1151,6 +1151,16 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     }).join('') + '</div>';
   }
 
+  // One live fact instead of static instructions: what the person would come back to check.
+  function clientSub(past) {
+    if (state.sample && !past) return 'Sample data. Replace it with an import.';
+    var n = viewItems().filter(function (i) { return i.owner === 'me' && STATUS[i.status].open; }).length;
+    return n ? n + (n === 1 ? ' item needs' : ' items need') + ' your attention.' : 'Everything is up to date.';
+  }
+  function bookkeeperSub() {
+    var n = viewItems().filter(function (i) { return (i.status === 'hubdoc' || i.status === 'explained') && !i.reviewed; }).length;
+    return n ? n + (n === 1 ? ' item is' : ' items are') + ' ready for your review.' : 'Nothing is waiting on you right now.';
+  }
   // With more than one request, the title itself is the switcher (a native menu laid over the heading).
   function titleBlock() {
     var name = esc(viewName());
@@ -1168,7 +1178,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var past = pastView();
     var items = viewItems();
     var hasItems = rawItems().length > 0;
-    var head = '<div class="sheet-head"><div>' + titleBlock() + '<p>' + (state.sample && !past ? 'Sample data. Replace it with an import.' : 'From ' + esc(state.from) + '.') + '</p></div>' +
+    var head = '<div class="sheet-head"><div>' + titleBlock() + '<p>' + esc(clientSub(past)) + '</p></div>' +
       '<button type="button" class="btn primary" data-act="openimport">Import request</button></div>';
     var body;
     if (!hasItems) {
@@ -1184,7 +1194,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   /* ---------- bookkeeper ---------- */
   function renderBookkeeper() {
     var past = pastView();
-    var head = '<div class="sheet-head"><div>' + titleBlock() + '<p>Review what has been resolved. Accept it, or send it back with a reason. It updates as they work.</p></div></div>';
+    var head = '<div class="sheet-head"><div>' + titleBlock() + '<p>' + esc(bookkeeperSub()) + '</p></div></div>';
     if (!rawItems().length) return strip() + '<main id="main" tabindex="-1">' + head + '<div class="empty"><h2>Nothing to show yet</h2><p>The client has not imported this request.</p></div></main>';
     return strip() + '<main id="main" tabindex="-1">' + head + pastBar() + toolbar(false) + ledger(shownItems(), 'bk') + '</main>' + legend();
   }
