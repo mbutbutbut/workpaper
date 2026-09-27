@@ -18,7 +18,8 @@ insert into requests (id, name) values ('00000000-0000-0000-0000-0000000000a1', 
 insert into items (request_id, no, description, owner, status, fingerprint, assignee_id) values
   ('00000000-0000-0000-0000-0000000000a1', 1, 'Client item',   'me',   'waiting', 'rolecheck-1', null),
   ('00000000-0000-0000-0000-0000000000a1', 2, 'Jeff item',     'jeff', 'jeff',    'rolecheck-2', (select user_id from members where role = 'jeff' limit 1)),
-  ('00000000-0000-0000-0000-0000000000a1', 3, 'Resolved item', 'me',   'hubdoc',  'rolecheck-3', null);
+  ('00000000-0000-0000-0000-0000000000a1', 3, 'Resolved item', 'me',   'hubdoc',  'rolecheck-3', null),
+  ('00000000-0000-0000-0000-0000000000a1', 4, 'No document item', 'me', 'missing', 'rolecheck-4', null);
 insert into comments (fingerprint, role, kind, body) values
   ('rolecheck-1', 'client', 'message', 'thread on the client item'),
   ('rolecheck-2', 'client', 'message', 'thread on the Jeff item');
@@ -27,7 +28,7 @@ insert into comments (fingerprint, role, kind, body) values
 select set_config('request.jwt.claim.sub', (select user_id::text from members where role = 'client' limit 1), false),
        set_config('request.jwt.claims', json_build_object('sub', (select user_id from members where role = 'client' limit 1), 'role', 'authenticated')::text, false);
 set role authenticated;
-insert into results select 'client sees all three items', '3', count(*)::text from items where request_id = '00000000-0000-0000-0000-0000000000a1';
+insert into results select 'client sees all four items', '4', count(*)::text from items where request_id = '00000000-0000-0000-0000-0000000000a1';
 do $$ declare n int; begin
   update items set description = 'edited by client' where fingerprint = 'rolecheck-1';
   get diagnostics n = row_count;
@@ -154,7 +155,7 @@ reset role;
 select set_config('request.jwt.claim.sub', (select user_id::text from members where role = 'bookkeeper' limit 1), false),
        set_config('request.jwt.claims', json_build_object('sub', (select user_id from members where role = 'bookkeeper' limit 1), 'role', 'authenticated')::text, false);
 set role authenticated;
-insert into results select 'bookkeeper sees all three items', '3', count(*)::text from items where request_id = '00000000-0000-0000-0000-0000000000a1';
+insert into results select 'bookkeeper sees all four items', '4', count(*)::text from items where request_id = '00000000-0000-0000-0000-0000000000a1';
 do $$ declare n int; begin
   update items set note = 'bookkeeper edit' where fingerprint = 'rolecheck-1';
   get diagnostics n = row_count;
@@ -188,6 +189,13 @@ do $$ declare r text; begin
   insert into results values ('bookkeeper can accept a resolved item', 'true', r);
 exception when others then
   insert into results values ('bookkeeper can accept a resolved item', 'true', 'error');
+end $$;
+do $$ declare r text; begin
+  perform accept_item((select id from items where fingerprint = 'rolecheck-4'));
+  select reviewed::text || '/' || status into r from items where fingerprint = 'rolecheck-4';
+  insert into results values ('bookkeeper can accept a No document item too, and it stays flagged', 'true/missing', r);
+exception when others then
+  insert into results values ('bookkeeper can accept a No document item too, and it stays flagged', 'true/missing', 'error');
 end $$;
 do $$ begin
   perform reopen_item((select id from items where fingerprint = 'rolecheck-3'), '   ');

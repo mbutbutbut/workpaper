@@ -68,9 +68,13 @@ Run `supabase/member-names.sql` once (after `schema.sql`; any time relative to t
 
 Run `supabase/per-person-assignment.sql` once (after `schema.sql` and `member-names.sql`). Until now, "With team" was one pooled inbox: every team-role account saw everything the role had ever been given. This records who specifically an item is assigned to, so each team member gets their own separate list. It backfills existing items to whichever team member already exists; if you add a second one, reassign items to them from the Owner column.
 
+### 4g. Accepting a "No document" item
+
+Run `supabase/accept-no-document.sql` once (after `review.sql`). It lets the bookkeeper accept a No document item the same way they accept a resolved or Explained one — the red flag stays, but it moves off their to-review list.
+
 ## 5. Check the rules
 
-Paste `supabase/role-check.sql` into the SQL editor and run it (after `review.sql`, `messages.sql`, `member-names.sql` and `per-person-assignment.sql`). It acts as each person in turn, using the same database rules the app uses, then shows a PASS/FAIL table. Every row must say PASS, and it deletes its own test data.
+Paste `supabase/role-check.sql` into the SQL editor and run it (after `review.sql`, `messages.sql`, `member-names.sql`, `per-person-assignment.sql` and `accept-no-document.sql`). It acts as each person in turn, using the same database rules the app uses, then shows a PASS/FAIL table. Every row must say PASS, and it deletes its own test data.
 
 Then confirm in the real app, signed in as each person:
 - The team member sees only their own items and can change only status and note.
