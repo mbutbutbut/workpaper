@@ -765,7 +765,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       if (ui.filter === 'jeff') return i.owner === 'jeff';
       if (ui.filter === 'missing') return i.status === 'missing';
       if (ui.filter === 'done') return !STATUS[i.status].open && i.status !== 'missing';
-      if (ui.filter === 'review') return (i.status === 'hubdoc' || i.status === 'explained') && !i.reviewed;
+      if (ui.filter === 'review') return (i.status === 'hubdoc' || i.status === 'explained' || i.status === 'missing') && !i.reviewed;
       if (ui.filter === 'sentback') return !!i.sentBack;
       return true;
     });
@@ -845,7 +845,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       all: v.length, open: open,
       jeff: v.filter(function (i) { return i.owner === 'jeff'; }).length,
       sentback: v.filter(function (i) { return i.sentBack; }).length,
-      review: v.filter(function (i) { return (i.status === 'hubdoc' || i.status === 'explained') && !i.reviewed; }).length,
+      review: v.filter(function (i) { return (i.status === 'hubdoc' || i.status === 'explained' || i.status === 'missing') && !i.reviewed; }).length,
       missing: v.filter(function (i) { return i.status === 'missing'; }).length,
       done: v.filter(function (i) { return !STATUS[i.status].open && i.status !== 'missing'; }).length
     };
@@ -1014,7 +1014,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   function seenKey(it) { return (state.user || state.role || '') + '|' + it.fp; }
   function isUnread(it) { var last = seen[seenKey(it)] || ''; return msgs(it).some(function (m) { return m.role !== state.role && String(m.at) > last; }); }
   function lastReopen(it) { var l = msgs(it).filter(function (m) { return m.kind === 'reopen'; }); return l.length ? l[l.length - 1] : null; }
-  function canAccept(it) { return state.role === 'bookkeeper' && (it.status === 'hubdoc' || it.status === 'explained') && !it.reviewed; }
+  function canAccept(it) { return state.role === 'bookkeeper' && (it.status === 'hubdoc' || it.status === 'explained' || it.status === 'missing') && !it.reviewed; }
   function canReopen(it) { return state.role === 'bookkeeper' && (it.status === 'hubdoc' || it.status === 'explained' || it.status === 'missing'); }
   function fmtTime(iso) { var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
   function findItem(id) { return state.items.find(function (x) { return x.id === id; }); }
@@ -1202,7 +1202,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     return n ? n + (n === 1 ? ' item needs' : ' items need') + ' your attention.' : 'Everything is up to date.';
   }
   function bookkeeperSub() {
-    var n = viewItems().filter(function (i) { return (i.status === 'hubdoc' || i.status === 'explained') && !i.reviewed; }).length;
+    var n = viewItems().filter(function (i) { return (i.status === 'hubdoc' || i.status === 'explained' || i.status === 'missing') && !i.reviewed; }).length;
     return n ? n + (n === 1 ? ' item is' : ' items are') + ' ready for your review.' : 'Nothing is waiting on you right now.';
   }
   // With more than one request, the title itself is the switcher (a native menu laid over the heading).
