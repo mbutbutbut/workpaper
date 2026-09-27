@@ -584,6 +584,9 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   /* ---------- state ---------- */
   var KEY = 'workpaper-prototype-v2';
   var CFG = window.WORKPAPER_CONFIG || {};
+  // Captured once, before any render can rewrite the address bar, so a shared link's own
+  // filter/range/request survive that first render.
+  var INITIAL_SEARCH = location.search;
   var useRemote = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
   var remote = null; // created after the database library loads, only when configured
   // Third-party code loads only when needed: the Excel reader on first import, the database library only when configured.
@@ -857,7 +860,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
       tabs.map(function (t) { return '<button type="button" data-filter="' + t[0] + '" aria-pressed="' + (ui.filter === t[0]) + '">' + (t[2] ? '<span class="tg" aria-hidden="true">' + t[2] + '</span>' : '') + t[1] + ' <span class="num tn">' + n[t[0]] + '</span></button>'; }).join('') +
       '</div>' + (showJeffTab ? selectAllBtn() : '') +
       '<button type="button" class="btn small fs-toggle" data-act="togglefs" aria-expanded="' + !!ui.fsOpen + '" aria-controls="fsPanel">Dates &amp; sort' + (narrowed ? ' <span class="num">· ' + viewItems().length + ' of ' + rawItems().length + '</span>' : '') + '</button>' +
-      '<div class="fs-panel' + (ui.fsOpen ? ' open' : '') + '" id="fsPanel">' + rangeSelect() + sortSelect() + pastSelect() + '</div></div>';
+      '<div class="fs-panel' + (ui.fsOpen ? ' open' : '') + '" id="fsPanel">' + rangeSelect() + sortSelect() + (bk ? '' : pastSelect()) + shareLinkBtn() + '</div></div>';
   }
 
   /* ---------- login ---------- */
@@ -1206,6 +1209,50 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
   // The heading is the app's identity, not the current request; it stays put while the subtitle carries what's live.
   function titleBlock(word) { return '<h1>' + word + '</h1>'; }
   // Picking an old import is a Dates & sort task now, not part of the heading.
+  // The address bar for the client and bookkeeper always reflects the current filter, date
+  // range and (if viewing one) past request -- so it can be copied and sent as-is, and a
+  // "Copy link" button makes that discoverable without needing to know that trick.
+  function shareUrl() {
+    var p = new URLSearchParams();
+    if (ui.filter && ui.filter !== 'all') p.set('filter', ui.filter);
+    if (ui.range.key !== 'fy') p.set('range', ui.range.key);
+    if (ui.range.key === 'custom') {
+      if (ui.range.from) p.set('from', ui.range.from);
+      if (ui.range.to) p.set('to', ui.range.to);
+    }
+    if (ui.viewId) p.set('request', ui.viewId);
+    var qs = p.toString();
+    return location.origin + location.pathname + (qs ? '?' + qs : '');
+  }
+  function syncUrl() {
+    if (!useRemote || !state.user || state.role === 'jeff') return;
+    var url = shareUrl();
+    if (url !== location.href.split('#')[0]) history.replaceState(null, '', url);
+  }
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return Promise.resolve();
+  }
+  function shareLinkBtn() {
+    if (!useRemote) return '';
+    return '<button type="button" class="btn small" data-act="copylink">' + (ui.linkCopied ? 'Copied!' : 'Copy link to this view') + '</button>';
+  }
+  // Read a shared link's filter, date range and request once, right after signing in.
+  var FILTER_KEYS = ['all', 'open', 'jeff', 'sentback', 'review', 'missing', 'done'];
+  function applyUrlParams() {
+    var p = new URLSearchParams(INITIAL_SEARCH);
+    var f = p.get('filter'), r = p.get('range'), from = p.get('from'), to = p.get('to'), req = p.get('request');
+    if (f && FILTER_KEYS.indexOf(f) > -1) ui.filter = f;
+    if (r && RANGE_OPTS.some(function (o) { return o[0] === r; })) {
+      ui.range = { key: r, from: r === 'custom' ? (from || '') : '', to: r === 'custom' ? (to || '') : '' };
+    }
+    if (req && state.history.some(function (h) { return h.id === req; })) ui.viewId = req;
+  }
   function pastSelect() {
     if (!state.history.length) return '';
     var opts = '<option value=""' + (!ui.viewId ? ' selected' : '') + '>' + esc(state.cycle) + ' (current)</option>' +
@@ -1332,6 +1379,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     var legEl = document.querySelector('.legend');
     document.documentElement.style.setProperty('--legend-h', (legEl ? Math.round(legEl.getBoundingClientRect().height) : 0) + 'px');
     document.body.classList.toggle('has-bulk', !!app.querySelector('.bulkbar'));
+    syncUrl();
     var menuNode = app.querySelector('.menu');
     if (menuNode) {
       var menuRow = menuNode.closest('.row'); if (menuRow) menuRow.classList.add('open-menu');
@@ -1498,6 +1546,7 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
     }
     state.user = session.user.email; state.uid = session.user.id; state.role = m.data.role; ui.authError = '';
     await loadRemote();
+    applyUrlParams(); render();
     remote.channel('items-live').on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, scheduleReload).on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, scheduleReload).subscribe();
   }
 
@@ -1622,6 +1671,13 @@ main { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 var(-
           .catch(function (err) { ui.threadErr = 'Could not send it back' + (err && err.message ? ' (' + err.message + ')' : '') + '.'; render('#threadBody'); });
         return;
       }
+    }
+    if (d.act === 'copylink') {
+      copyText(shareUrl()).then(function () {
+        ui.linkCopied = true; say('Link copied. Paste it to share this view.'); render('[data-act="copylink"]');
+        setTimeout(function () { ui.linkCopied = false; render(); }, 1800);
+      }).catch(function () { ui.error = 'Could not copy the link. Copy it from the address bar instead.'; render(); });
+      return;
     }
     if (d.act === 'team') { ui.teamOpen = !ui.teamOpen; ui.accountOpen = false; ui.team.msg = null; ui.team.confirmRemove = null; ui.team.resetFor = null; ui.team.renameFor = null; if (ui.teamOpen && !ui.team.people) loadTeam('#addFirst'); else render(ui.teamOpen ? '#addFirst' : '[data-act="team"]'); return; }
     if (d.act === 'closeteam') { ui.teamOpen = false; ui.team.msg = null; render('[data-act="team"]'); return; }
